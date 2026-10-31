@@ -48,6 +48,7 @@ async function sendScene(sock, jid, msg, battle, statusText, hitSide, damage, cr
         trainer: battle.opponentTrainer,
       },
       round: battle.round,
+      arenaId: battle.arenaId || "meadow",
       hitSide, damage, crit, statusText,
     });
     await sock.sendMessage(jid, { image: buf, caption: statusText, mentions }, { quoted: msg });
