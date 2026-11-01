@@ -112,13 +112,22 @@ async function valoreAudio(videoUrl) {
 // ── Try downloading via multiple endpoints ────────────────────────────────────
 
 export async function fetchAudio(videoUrl, searchTitle = "") {
+  const officialSoundCloudUrl = soundcloudDownloadUrl(videoUrl);
+  if (officialSoundCloudUrl) {
+    // Never pass SoundCloud URLs to general providers: they may stream tracks
+    // even when the creator has disabled the official download option.
+    const file = await downloadMediaBuffer(officialSoundCloudUrl, { timeoutMs: 45_000 });
+    const format = requireAudioPayload(file.buffer);
+    return {
+      buffer: file.buffer,
+      mimetype: format.mime,
+      extension: format.extension,
+      title: searchTitle || soundcloudTrackTitle(videoUrl),
+    };
+  }
+
   const endpoints = [
     async () => { const data = await knightbotGet("download", { type: "mp3", url: videoUrl }); const dl = pickKnightMedia(data, videoUrl); if (!dl) throw new Error("KnightBot returned no audio link"); return { dl, title: pickKnightTitle(data, "YouTube Audio") }; },
-    ...(soundcloudDownloadUrl(videoUrl) ? [async () => {
-      const officialUrl = soundcloudDownloadUrl(videoUrl);
-      const file = await downloadMediaBuffer(officialUrl, { timeoutMs: 45_000 });
-      return { buffer: file.buffer, mimetype: file.mimetype, title: searchTitle || soundcloudTrackTitle(videoUrl) };
-    }] : []),
     async () => {
       const data = await kordGet("yt-song", videoUrl);
       const dl = pickKordMedia(data, "audio");
