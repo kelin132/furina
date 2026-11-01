@@ -1,4 +1,5 @@
 import { getDb } from "../../lib/mongo.mjs";
+import { getHarareDayWindow } from "../../lib/harareDayWindow.mjs";
 
 export default {
   name: "users",
@@ -17,14 +18,18 @@ export default {
 
     try {
       const db = await getDb();
-      const startOfDay = new Date();
-      startOfDay.setHours(0, 0, 0, 0);
+      const { start, end } = getHarareDayWindow();
 
       [total, registered, newToday] = await Promise.all([
         db.collection("users").countDocuments(),
         db.collection("users").countDocuments({ registered: true }),
         db.collection("users").countDocuments({
-          registeredAt: { $gte: startOfDay.toISOString() },
+          registered: true,
+          $or: [
+            { registeredAt: { $gte: start.toISOString(), $lt: end.toISOString() } },
+            { registeredAt: { $gte: start, $lt: end } },
+            { registeredAt: { $gte: start.getTime(), $lt: end.getTime() } },
+          ],
         }),
       ]);
     } catch (err) {

@@ -3,7 +3,7 @@
 // .removemod — remove a user from the mods list
 
 import { getModsData, saveModsData } from '../../lib/permissions.mjs';
-import { getStaffMembers } from '../economy/database.js';
+import { getStaffMembers, removeStaffLevel } from '../economy/database.js';
 import {
   bareNumber,
   getAllGroupNumberMap,
@@ -13,7 +13,7 @@ import {
   storedRealNumber,
 } from '../../lib/staffNumbers.mjs';
 
-const CACHE_TTL_MS = 30_000;
+const CACHE_TTL_MS = 5_000;
 let staffCache = null;
 let staffCacheAt = 0;
 let staffCacheInFlight = null;
@@ -40,57 +40,114 @@ async function getCachedStaffMembers() {
   return staffCacheInFlight;
 }
 
+function cleanName(name, number) {
+  const value = String(name || "").trim();
+  return value && bareNumber(value) !== bareNumber(number) ? value : "";
+}
+
+function normalizeName(value) {
+  return String(value || "").trim().replace(/^@/, "").replace(/\s+/g, " ").toLocaleLowerCase();
+}
+
+function commandSelector(msg) {
+  const raw = String(
+    msg.message?.conversation ||
+    msg.message?.extendedTextMessage?.text ||
+    msg.message?.imageMessage?.caption ||
+    "",
+  ).trim();
+  return raw.replace(/^\S+\s*/, "").trim();
+}
+
+async function buildRoster(sock, jid, data) {
+  const [dbStaff, currentGroupNumbers] = await Promise.all([
+    getCachedStaffMembers(),
+    jid?.endsWith("@g.us") ? getGroupNumberMap(sock, jid) : Promise.resolve(new Map()),
+  ]);
+  const sourceNumbers = [
+    ...dbStaff.map((user) => bareNumber(user._id || user.jid || user.userId)),
+    ...data.map((entry) => bareNumber(entry.num)),
+  ].filter(Boolean);
+  const cleanNumMap = new Map(currentGroupNumbers);
+  const unresolved = [...new Set(sourceNumbers)].filter((number) => !cleanNumMap.has(number));
+  if (unresolved.length) {
+    mergeNumberMaps(cleanNumMap, await getSocketLidNumberMap(sock, unresolved));
+  }
+  const stillUnresolved = unresolved.filter((number) => !cleanNumMap.has(number));
+  if (stillUnresolved.length) {
+    mergeNumberMaps(cleanNumMap, await getAllGroupNumberMap(sock));
+  }
+
+  const byPhone = new Map();
+  const phoneFor = (source, user) => {
+    const number = bareNumber(source);
+    return storedRealNumber(user) || cleanNumMap.get(number) || number;
+  };
+
+  for (const user of dbStaff) {
+    const source = bareNumber(user._id || user.jid || user.userId);
+    const phone = phoneFor(source, user);
+    if (!phone) continue;
+    const current = byPhone.get(phone) || {
+      phone,
+      name: "",
+      level: 1,
+      user: null,
+      modEntries: [],
+      sourceNumbers: new Set(),
+    };
+    current.name = user.name || current.name;
+    current.level = Number(user.staffLevel) || 1;
+    current.user = user;
+    current.sourceNumbers.add(source);
+    byPhone.set(phone, current);
+  }
+
+  for (const entry of data) {
+    const source = bareNumber(entry.num);
+    const phone = phoneFor(source);
+    if (!phone) continue;
+    const current = byPhone.get(phone) || {
+      phone,
+      name: "",
+      level: 1,
+      user: null,
+      modEntries: [],
+      sourceNumbers: new Set(),
+    };
+    current.name = current.name || entry.name || "";
+    current.modEntries.push(entry);
+    current.sourceNumbers.add(source);
+    byPhone.set(phone, current);
+  }
+
+  const sorted = [...byPhone.values()].sort((a, b) =>
+    b.level - a.level || String(a.name || "").localeCompare(String(b.name || "")),
+  );
+  return {
+    numberMap: cleanNumMap,
+    admins: sorted.filter((member) => member.level >= 3),
+    staff: sorted.filter((member) => member.level === 2),
+    mods: sorted.filter((member) => member.level <= 1),
+  };
+}
+
 export default {
   name:        'mods',
   description: 'List or remove bot moderators',
   category:    'owner',
-  usage:       '.mods | .removemod @user',
+  usage:       '.mods | .removemod <list number | name | phone | @user>',
   aliases:     ['removemod', 'modlist'],
   cooldown:    5,
-  isOwner:     false,
+  isOwner:     true,
 
   async run({ sock, msg, cmd }) {
     const jid  = msg.key.remoteJid;
     const data = getModsData();
 
-    // ── .mods / .modlist ─────────────────────────────────────────────────
     if (cmd === 'mods' || cmd === 'modlist') {
-
-      const staffPromise = getCachedStaffMembers();
-      const currentGroupPromise = jid?.endsWith('@g.us')
-        ? getGroupNumberMap(sock, jid)
-        : Promise.resolve(new Map());
-      const [dbStaff, currentGroupNumbers] = await Promise.all([
-        staffPromise,
-        currentGroupPromise,
-      ]);
-
-      const staffMap = new Map();
-
-      for (const u of dbStaff) {
-        const num = bareNumber(u._id);
-        const realNum = storedRealNumber(u);
-        
-        staffMap.set(num, {
-          jid:   u._id,
-          name:  u.name || `+${num}`,
-          level: u.staffLevel || 1,
-          realNum: realNum && realNum.length >= 7 ? realNum : null
-        });
-      }
-
-      for (const { num: rawNum, name } of data) {
-        const num = bareNumber(rawNum);
-        if (!staffMap.has(num)) {
-          staffMap.set(num, {
-            jid:   `${num}@s.whatsapp.net`,
-            name:  name || `+${num}`,
-            level: 1,
-          });
-        }
-      }
-
-      if (!staffMap.size) {
+      const { admins, staff, mods } = await buildRoster(sock, jid, data);
+      if (!admins.length && !staff.length && !mods.length) {
         return sock.sendMessage(jid, {
           text:
             `╭───〔 ⚔️ 𝐒𝐓𝐀𝐅𝐅 & 𝐌𝐎𝐃𝐒 〕───╮\n` +
@@ -101,31 +158,10 @@ export default {
         }, { quoted: msg });
       }
 
-      const cleanNumMap = new Map(currentGroupNumbers);
-
-      const unresolved = [...staffMap.keys()].filter((num) => !cleanNumMap.has(num));
-      if (unresolved.length > 0) {
-        mergeNumberMaps(cleanNumMap, await getSocketLidNumberMap(sock, unresolved));
-      }
-
-      const stillUnresolved = unresolved.filter((num) => !cleanNumMap.has(num));
-      if (stillUnresolved.length > 0) {
-        mergeNumberMaps(cleanNumMap, await getAllGroupNumberMap(sock));
-      }
-
-      const sorted = [...staffMap.values()].sort(
-        (a, b) => b.level - a.level || a.name.localeCompare(b.name)
-      );
-
-      const admins = sorted.filter((s) => s.level >= 3);
-      const staff = sorted.filter((s) => s.level === 2);
-      const mods = sorted.filter((s) => s.level <= 1);
-
       const formatRows = (members) => members.length
-        ? members.map((s) => {
-            const numPart = bareNumber(s.jid);
-            const number = s.realNum || cleanNumMap.get(numPart) || numPart;
-            return `│ ${s.name || 'Unknown'} ─ +${number}`;
+        ? members.map((member, index) => {
+            const name = cleanName(member.name, member.phone);
+            return `│ ${index + 1}. ${name ? `${name} ─ ` : ""}+${member.phone}`;
           })
         : ['│ None listed'];
 
@@ -149,26 +185,43 @@ export default {
       }, { quoted: msg });
     }
 
-    // ── Resolve target JID ────────────────────────────────────────────────
     const ctx        = msg.message?.extendedTextMessage?.contextInfo;
     const mentionJid = ctx?.mentionedJid?.[0];
     const quotedPart = ctx?.participant;
+    const identity = mentionJid || quotedPart || "";
+    const selector = commandSelector(msg);
+    const roster = await buildRoster(sock, jid, data);
+    const targetNumber = bareNumber(identity);
+    let matches = [];
 
-    const rawText  = msg.message?.conversation || msg.message?.extendedTextMessage?.text || '';
-    const numArg   = rawText.trim().split(/\s+/).slice(1)[0];
-    const numMatch = numArg?.replace(/\D/g, '');
+    if (targetNumber) {
+      const resolved = roster.numberMap.get(targetNumber) || targetNumber;
+      matches = roster.mods.filter((member) =>
+        member.phone === resolved || member.sourceNumbers.has(targetNumber),
+      );
+    } else if (/^\d{1,3}$/.test(selector) && Number(selector) >= 1 && Number(selector) <= roster.mods.length) {
+      matches = [roster.mods[Number(selector) - 1]];
+    } else {
+      const digits = bareNumber(selector);
+      if (/^\d{7,16}$/.test(digits)) {
+        const resolved = roster.numberMap.get(digits) || digits;
+        matches = roster.mods.filter((member) =>
+          member.phone === resolved || member.sourceNumbers.has(digits),
+        );
+      } else if (selector) {
+        const wantedName = normalizeName(selector);
+        matches = roster.mods.filter((member) => normalizeName(member.name) === wantedName);
+      }
+    }
 
-    const targetJid =
-      mentionJid ||
-      quotedPart ||
-      (numMatch?.length >= 7 ? `${numMatch}@s.whatsapp.net` : null);
-
-    if (!targetJid) {
+    if (!identity && !selector) {
       return sock.sendMessage(jid, {
         text:
           `╭───〔 ⚔️ 𝐒𝐓𝐀𝐅𝐅 & 𝐌𝐎𝐃𝐒 〕───╮\n` +
           `│ ❌ Please specify a user to remove.\n` +
           `│\n` +
+          `│ List number: .removemod 1\n` +
+          `│ Name: .removemod Kelin\n` +
           `│ Mention: .removemod @user\n` +
           `│ Reply: .removemod\n` +
           `│ Phone: .removemod 27628114340\n` +
@@ -176,29 +229,40 @@ export default {
       }, { quoted: msg });
     }
 
-    const num = targetJid.split('@')[0].split(':')[0].replace(/\D/g, '');
-
-    // ── .removemod ────────────────────────────────────────────────────────
     if (cmd === 'removemod') {
-      const idx = data.findIndex(e => e.num === num);
-      if (idx === -1) {
+      if (!matches.length) {
         return sock.sendMessage(jid, {
           text:
             `╭───〔 ⚔️ 𝐒𝐓𝐀𝐅𝐅 & 𝐌𝐎𝐃𝐒 〕───╮\n` +
-            `│ ❌ @${num} is not in the mods list.\n` +
+            `│ ❌ No matching moderator found. Check .mods and use its list number, exact name, or phone.\n` +
             `╰────────────────────╯`,
-          mentions: [targetJid],
         }, { quoted: msg });
       }
-      const { name } = data[idx];
-      data.splice(idx, 1);
-      saveModsData(data);
+      if (matches.length > 1) {
+        return sock.sendMessage(jid, {
+          text: "❌ More than one moderator matches. Use their phone number or list number from `.mods`.",
+        }, { quoted: msg });
+      }
+
+      const target = matches[0];
+      if (target.user) await removeStaffLevel(target.user._id);
+      const entriesToRemove = new Set(target.modEntries);
+      if (entriesToRemove.size) {
+        for (let i = data.length - 1; i >= 0; i--) {
+          if (entriesToRemove.has(data[i])) data.splice(i, 1);
+        }
+        saveModsData(data);
+      }
+      staffCache = null;
+      staffCacheAt = 0;
+      const name = cleanName(target.name, target.phone);
+      const label = name ? `${name} (+${target.phone})` : `+${target.phone}`;
+
       return sock.sendMessage(jid, {
         text:
           `╭───〔 ⚔️ 𝐒𝐓𝐀𝐅𝐅 & 𝐌𝐎𝐃𝐒 〕───╮\n` +
-          `│ ✅ Removed @${num} (${name}) from mods.\n` +
+          `│ ✅ Removed ${label} from mods.\n` +
           `╰────────────────────╯`,
-        mentions: [targetJid],
       }, { quoted: msg });
     }
   },

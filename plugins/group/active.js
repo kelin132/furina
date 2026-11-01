@@ -16,19 +16,42 @@ export function decodeActivityJid(value) {
 }
 
 export function resolveActiveChatters(rows, metadata) {
-  return rows.map(([storedJid, count]) => {
+  const byParticipant = new Map();
+
+  for (const [storedJid, count] of rows) {
     const decoded = personalJid(decodeActivityJid(storedJid));
     const participant = decoded ? findGroupParticipant(metadata, [decoded]) : null;
+    if (Array.isArray(metadata?.participants) && !participant) continue;
+
+    const phoneJid = [
+      participant?.phoneNumber,
+      participant?.pn,
+      participant?.jid,
+      participant?.id,
+      participant?.lid,
+    ].map(personalJid).find((id) => id.endsWith("@s.whatsapp.net"));
     const ids = participantIds(participant);
-    const jid = ids.includes(decoded) ? decoded : (ids[0] || decoded);
+    const jid = phoneJid || (ids.includes(decoded) ? decoded : (ids[0] || decoded));
+    if (!jid) continue;
+
     const name = String(participant?.notify || participant?.name || participant?.verifiedName || "").trim();
     const tag = jid ? jid.split("@")[0].split(":")[0] : "";
-    return {
+    const previous = byParticipant.get(jid);
+    byParticipant.set(jid, {
       jid,
-      count: Number(count) || 0,
+      count: (previous?.count || 0) + (Number(count) || 0),
+      name: previous?.name || name,
+      tag,
+    });
+  }
+
+  return [...byParticipant.values()]
+    .map(({ jid, count, name, tag }) => ({
+      jid,
+      count,
       label: tag ? `@${tag}${name && name !== tag ? ` (${name})` : ""}` : (name || "Unknown member"),
-    };
-  });
+    }))
+    .sort((a, b) => b.count - a.count);
 }
 
 export default {
@@ -47,9 +70,7 @@ export default {
     }
 
     const counts = await groupSettings.getActivityCounts(jid);
-    const rows = Object.entries(counts)
-      .sort((a, b) => Number(b[1]) - Number(a[1]))
-      .slice(0, 10);
+    const rows = Object.entries(counts);
 
     if (!rows.length) {
       return sock.sendMessage(jid, {
@@ -61,7 +82,12 @@ export default {
     try {
       metadata = await getGroupMetadata(sock, jid);
     } catch { /* Keep usable output if WhatsApp metadata is temporarily unavailable. */ }
-    const chatters = resolveActiveChatters(rows, metadata);
+    const chatters = resolveActiveChatters(rows, metadata).slice(0, 10);
+    if (!chatters.length) {
+      return sock.sendMessage(jid, {
+        text: "📈 No current group members have activity records yet.",
+      }, { quoted: msg });
+    }
     const mentions = [...new Set(chatters.map((member) => member.jid).filter(Boolean))];
     const text = `🏆 *Top chatters*\n\n${chatters
       .map((member, index) => `${index + 1}. ${member.label} — ${member.count} messages`)
