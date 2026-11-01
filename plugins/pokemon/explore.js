@@ -5,8 +5,6 @@ import { hasWild, setWild } from "../../lib/pokemon/wildState.mjs";
 import { generateBattleScene } from "../../lib/pokemon/canvas.mjs";
 import { POKEMON_DESTINATIONS, resolvePokemonDestination, createFusionPokemon } from "../../lib/pokemon/exploration.mjs";
 import { readPokemonAnimation, readPokemonMapImage } from "../../lib/pokemon/media.mjs";
-import { getWeatherForDestination } from "../../lib/pokemon/seasonal.mjs";
-import { recordDailyProgress } from "../../lib/pokemon/progression.mjs";
 
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -79,7 +77,6 @@ export default {
     const actor = msg.discordChannelId
       ? "@" + (msg.pushName || String(sender).replace(/^discord:/, "").split("@")[0])
       : "@" + String(sender).split("@")[0];
-    const weather = getWeatherForDestination(destination);
     const travelCaption = actor + " is travelling to explore " + destination.name + "…";
     try {
       const walkingAnimation = await readPokemonAnimation("explore-walk");
@@ -102,15 +99,13 @@ export default {
     await sock.sendMessage(jid, { text: "🔎 Exploring " + destination.name + "…" }, { quoted: msg });
     await sleep(1200);
 
-    await recordDailyProgress(sender, "explore")
-      .catch((error) => console.error("[pokemon research] Progress recording failed:", error?.message || error));
     const boss = createFusionPokemon(destination);
     setWild(jid, boss, sender);
     const battle = startWildBattle(jid, {
       jid: sender,
       username: trainer.username || msg.pushName || "Trainer",
       pokemon: lead,
-    }, boss, { weatherId: weather.id });
+    }, boss);
 
     let sceneBuffer;
     try {
@@ -138,21 +133,16 @@ export default {
           trainer: battle?.challengerTrainer,
         },
         round: 1,
-        statusText: boss.displayName + " appeared at " + destination.name + " under " + weather.name + "!",
+        statusText: boss.displayName + " appeared at " + destination.name + "!",
       });
     } catch {}
 
     const playerLabel = msg.discordChannelId ? (msg.pushName || "Trainer") : actor;
     const moves = boss.moves.map((move, index) => (index + 1) + ". " + move.name).join(" • ");
-    const weatherEffects = [
-      weather.boostType && `${weather.boostType} moves are stronger`,
-      weather.weakType && `${weather.weakType} moves are weaker`,
-    ].filter(Boolean).join("; ");
     const caption = "⚔️ *A fused Pokémon appeared at " + destination.name + "!*\n\n" +
       playerLabel + "'s " + (lead.displayName || lead.name) + " (Lv." + lead.level + ")\n" +
       "🆚 " + boss.displayName + " (Lv." + boss.level + ")\n" +
       "❤️ " + boss.hp + "/" + boss.maxHp + "  •  🛡️ Fusion shield " + boss.shieldCharges + "/" + boss.maxShieldCharges + "\n" +
-      "🌦️ " + weather.name + (weatherEffects ? " — " + weatherEffects : "") + "\n" +
       "Special moves: " + moves + "\n\n" +
       "Use .battle fight <1-4>, .battle switch, or .battle run. This fused Pokémon cannot be caught.";
     const battleComponents = {};
