@@ -10,10 +10,14 @@ import { princeMedia, PRINCE_ENDPOINTS } from "../../lib/princeTech.mjs";
 import { kordGet, pickKordMedia, pickKordTitle } from "../../lib/kordApi.mjs";
 import { knightbotGet, pickKnightMedia, pickKnightTitle } from "../../lib/knightbotApi.mjs";
 import { requireAudioPayload } from "../../lib/audioPayload.mjs";
+import { isSoundCloudTrackUrl, soundcloudDownloadUrl, soundcloudTrackTitle } from "../../lib/soundcloudDownload.mjs";
 
 // ── YouTube search ────────────────────────────────────────────────────────────
 
 async function ytSearch(input) {
+  if (isSoundCloudTrackUrl(input)) {
+    return { url: input, title: soundcloudTrackTitle(input), thumbnail: null, duration: "", author: "", views: "" };
+  }
   if (/youtube\.com|youtu\.be/i.test(input)) {
     return { url: input, title: input, thumbnail: null, duration: "", author: "", views: "" };
   }
@@ -110,6 +114,11 @@ async function valoreAudio(videoUrl) {
 export async function fetchAudio(videoUrl, searchTitle = "") {
   const endpoints = [
     async () => { const data = await knightbotGet("download", { type: "mp3", url: videoUrl }); const dl = pickKnightMedia(data, videoUrl); if (!dl) throw new Error("KnightBot returned no audio link"); return { dl, title: pickKnightTitle(data, "YouTube Audio") }; },
+    ...(soundcloudDownloadUrl(videoUrl) ? [async () => {
+      const officialUrl = soundcloudDownloadUrl(videoUrl);
+      const file = await downloadMediaBuffer(officialUrl, { timeoutMs: 45_000 });
+      return { buffer: file.buffer, mimetype: file.mimetype, title: searchTitle || soundcloudTrackTitle(videoUrl) };
+    }] : []),
     async () => {
       const data = await kordGet("yt-song", videoUrl);
       const dl = pickKordMedia(data, "audio");
@@ -179,9 +188,9 @@ export async function fetchAudio(videoUrl, searchTitle = "") {
 
 export default {
   name: "play",
-  description: "Search and download audio from YouTube (128 kbps)",
+  description: "Search YouTube or download an officially downloadable SoundCloud track",
   category: "download",
-  usage: ".play <song name or YouTube URL>",
+  usage: ".play <song name, YouTube URL, or SoundCloud track URL>",
   aliases: ["song", "music", "mp3", "ytmp3"],
   cooldown: 15,
 
@@ -216,8 +225,11 @@ export default {
 
     } catch (err) {
       console.error("[play]", err.message);
+      const soundcloudInput = isSoundCloudTrackUrl(text);
       await sock.sendMessage(jid, {
-        text: "❌ This audio couldn't be downloaded. Try again later!"
+        text: soundcloudInput
+          ? "❌ SoundCloud's official download is unavailable for this track. The creator may have downloads disabled."
+          : "❌ This audio couldn't be downloaded. Try again later!"
       }, { quoted: msg });
     }
   },
