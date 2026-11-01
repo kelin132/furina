@@ -7,16 +7,19 @@ import { getTrainer, removeItem, addItem } from "../../lib/pokemon/players.mjs";
 import { addMoney } from "../economy/database.js";
 import { updatePokemon, addPokemonXP, buildPokemon, savePokemon, getTrainerParty, getPokemonXpNeeded, evolvePokemon } from "../../lib/pokemon/pokemonDb.mjs";
 import { addToParty, addToPC, updateTrainer } from "../../lib/pokemon/players.mjs";
-import { calcDamage, tryCatch, xpReward, pvpXpReward, coinReward, getMovesForType, getLearnableMoveAtLevel, getLevelEvolution, TYPE_EMOJIS, TYPE_MOVES, getTypeEffectiveness, effectivenessText } from "../../lib/pokemon/gameLogic.mjs";
+import { calcBattleDamage, tryCatch, xpReward, pvpXpReward, coinReward, getMovesForType, getLearnableMoveAtLevel, getLevelEvolution, TYPE_EMOJIS, TYPE_MOVES, getTypeEffectiveness, effectivenessText } from "../../lib/pokemon/gameLogic.mjs";
 import { generateBattleScene, generateBattleResult } from "../../lib/pokemon/canvas.mjs";
 import { fetchPokemon } from "../../lib/pokemon/api.mjs";
 import { setPendingLearn } from "../../lib/pokemon/moveLearnState.mjs";
 import { MART_ITEMS } from "../../lib/pokemon/martItems.mjs";
 import { readPokemonAnimation } from "../../lib/pokemon/media.mjs";
+import { recordDailyProgress, recordTournamentVictory } from "../../lib/pokemon/progression.mjs";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+const recordProgressSafely = (jid, event) => recordDailyProgress(jid, event)
+  .catch((error) => console.error("[pokemon research] Progress recording failed:", error?.message || error));
 const DELAY = 3000; // 3-second delay between messages
 
 async function sendScene(sock, jid, msg, battle, statusText, hitSide, damage, crit, mentions = []) {
@@ -179,6 +182,7 @@ async function handleWildDefeat(sock, jid, msg, battle, trainer) {
 
   if (wildPokemon.isFusionBoss) {
     if (!claimBattleReward(jid)) return;
+    await recordProgressSafely(battle.challengerJid, "win");
     const bossXp = 30000;
     const bossGold = 12000000;
     if (pokeId) await addPokemonXP(pokeId, bossXp);
@@ -196,6 +200,7 @@ async function handleWildDefeat(sock, jid, msg, battle, trainer) {
 
   const xpRes = await addPokemonXP(pokeId, xp);
   await addMoney(battle.challengerJid, coins);
+  await recordProgressSafely(battle.challengerJid, "win");
 
   endBattle(jid);
   clearWild(jid);
@@ -325,6 +330,9 @@ ${partyList}
   await addMoney(winner.jid, coins);
   await updateTrainer(winner.jid, { $inc: { wins: 1 } });
   await updateTrainer(loser.jid,  { $inc: { losses: 1 } });
+  await recordTournamentVictory(winner.jid)
+    .catch((error) => console.error("[pokemon tournament] Victory recording failed:", error?.message || error));
+  await recordProgressSafely(winner.jid, "win");
 
   endBattle(jid);
 
@@ -610,7 +618,7 @@ ${hasBalls ? `🎾 *POKÉBALLS* ${battle.type !== "wild" ? "_(wild battles only)
           const wildMoves = currentBattle.opponentPokemon.moves || [];
           if (wildMoves.length > 0) {
             const wildMove     = wildMoves[Math.floor(Math.random() * wildMoves.length)];
-            const wildDmg      = calcDamage(currentBattle.opponentPokemon, { ...myPokemon, hp: newHp }, wildMove);
+            const wildDmg      = calcBattleDamage(currentBattle.opponentPokemon, { ...myPokemon, hp: newHp }, wildMove, currentBattle);
             const wildCrit     = Math.random() < 0.0625;
             const wildFinalDmg = wildCrit ? Math.floor(wildDmg * 1.5) : wildDmg;
             const newPlayerHp  = Math.max(0, newHp - wildFinalDmg);
@@ -762,6 +770,7 @@ ${hasBalls ? `🎾 *POKÉBALLS* ${battle.type !== "wild" ? "_(wild battles only)
         if (myPokeId) await addPokemonXP(myPokeId, catchXp).catch(() => null);
         const catchGold = coinReward(wildPokemon.level);
         await addMoney(sender, catchGold);
+        await recordProgressSafely(sender, "catch");
         return sock.sendMessage(jid, {
           text: pokeName + " was caught! You gained " + catchXp + " XP and $" + Number(catchGold).toLocaleString() + ".",
         }, { quoted: msg });
@@ -777,7 +786,7 @@ ${hasBalls ? `🎾 *POKÉBALLS* ${battle.type !== "wild" ? "_(wild battles only)
         const wildMoves = currentBattle.opponentPokemon.moves || [];
         if (wildMoves.length > 0) {
           const wildMove     = wildMoves[Math.floor(Math.random() * wildMoves.length)];
-          const wildDmg      = calcDamage(currentBattle.opponentPokemon, myPokemon, wildMove);
+          const wildDmg      = calcBattleDamage(currentBattle.opponentPokemon, myPokemon, wildMove, currentBattle);
           const wildCrit     = Math.random() < 0.0625;
           const wildFinalDmg = wildCrit ? Math.floor(wildDmg * 1.5) : wildDmg;
           const newPlayerHp  = Math.max(0, myPokemon.hp - wildFinalDmg);
@@ -903,7 +912,7 @@ Reply: \`.battle switch <slot number>\``,
         const wildMoves = currentBattle.opponentPokemon.moves || [];
         if (wildMoves.length > 0) {
           const wildMove     = wildMoves[Math.floor(Math.random() * wildMoves.length)];
-          const wildDmg      = calcDamage(currentBattle.opponentPokemon, newPoke, wildMove);
+          const wildDmg      = calcBattleDamage(currentBattle.opponentPokemon, newPoke, wildMove, currentBattle);
           const wildCrit     = Math.random() < 0.0625;
           const wildFinalDmg = wildCrit ? Math.floor(wildDmg * 1.5) : wildDmg;
           const newPlayerHp  = Math.max(0, newPoke.hp - wildFinalDmg);
@@ -997,7 +1006,7 @@ ${formatMoveList(moves)}
       }
 
       const move      = moves[moveIdx];
-      const damage = calcDamage(myPokemon, enemyPokemon, move);
+      const damage = calcBattleDamage(myPokemon, enemyPokemon, move, battle);
       const crit = Math.random() < 0.0625;
       let finalDmg = crit ? Math.floor(damage * 1.5) : damage;
       let shieldAbsorbed = 0;
@@ -1067,7 +1076,7 @@ ${formatMoveList(moves)}
         if (wildMoves.length > 0) {
           const wildMove      = wildMoves[Math.floor(Math.random() * wildMoves.length)];
           const currMyPokemon = isChallenger ? currentBattle.challengerPokemon : currentBattle.opponentPokemon;
-          const wildDmg       = calcDamage(currentBattle.opponentPokemon, currMyPokemon, wildMove);
+          const wildDmg       = calcBattleDamage(currentBattle.opponentPokemon, currMyPokemon, wildMove, currentBattle);
           const wildCrit      = Math.random() < 0.0625;
           const wildFinalDmg  = wildCrit ? Math.floor(wildDmg * 1.5) : wildDmg;
           const newPlayerHp   = Math.max(0, currMyPokemon.hp - wildFinalDmg);
