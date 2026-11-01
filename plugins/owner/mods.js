@@ -139,7 +139,7 @@ export default {
   usage:       '.mods | .removemod <list number | name | phone | @user>',
   aliases:     ['removemod', 'modlist'],
   cooldown:    5,
-  isOwner:     true,
+  isOwner:     false,
 
   async run({ sock, msg, cmd }) {
     const jid  = msg.key.remoteJid;
