@@ -1,10 +1,11 @@
 /**
  * .jail @user [duration]
- * Put a player in jail. Jailed players cannot use economy commands.
+ * Put a player in jail. Jailed players cannot use bot commands.
  * Duration examples: 1h, 30m, 2d. Omit for indefinite.
  * Staff-immune players cannot be jailed.
  */
 import { jailUser, getUser, isRegistered, addHistory } from "../economy/database.js";
+import { resolveLidToJid } from "../../lib/identity.mjs";
 
 function parseDuration(str) {
   if (!str) return 0;
@@ -20,7 +21,7 @@ function parseDuration(str) {
 
 export default {
   name: "jail",
-  description: "Jail a player (blocks economy commands)",
+  description: "Jail a player (blocks all bot commands)",
   category: "staff",
   usage: ".jail @user [1h|30m|2d]",
   aliases: ["jailplayer"],
@@ -43,6 +44,7 @@ export default {
           "*Duration examples:*\n• `30m` — 30 minutes\n• `2h` — 2 hours\n• `1d` — 1 day\n• _(omit for indefinite)_"
       }, { quoted: msg });
     }
+    targetJid = await resolveLidToJid(targetJid, sock, jid);
 
     if (!await isRegistered(targetJid)) {
       return sock.sendMessage(jid, { text: "❌ That player is not registered." }, { quoted: msg });
@@ -79,7 +81,7 @@ export default {
         `🔒 *Player Jailed*\n\n` +
         `👤 Player   : ${target.name}\n` +
         `⏳ Duration : ${durationStr}\n\n` +
-        `_Economy commands are blocked until released._`,
+        `_All bot commands are blocked until they are released or their sentence expires._`,
       mentions: [targetJid],
     }, { quoted: msg });
   }

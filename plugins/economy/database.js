@@ -17,6 +17,7 @@ import {
 } from "../../lib/afkLookupCache.mjs";
 import { BASE_BANK_LIMIT, STARTING_MONEY } from "./currency.js";
 import { invalidateAccountIdentityCache } from "../../lib/accountIdentity.mjs";
+import { invalidatePermissionCache } from "../../lib/permissions.mjs";
 
 export const DEFAULTS = {
   name:          "User",
@@ -1003,21 +1004,27 @@ export async function setPremium(id, value) {
  * @param {number} durationMs  0 = indefinite
  */
 export async function jailUser(id, durationMs = 0) {
-  const db       = await getDb();
+  const db = await getDb();
+  const userId = await storedUserId(db, id);
   const jailUntil = durationMs > 0 ? Date.now() + durationMs : null;
   await db.collection("users").updateOne(
-    { _id: id },
+    { _id: userId },
     { $set: { jailed: true, jailUntil } },
     { upsert: true }
   );
+  invalidatePermissionCache(id);
+  invalidatePermissionCache(userId);
 }
 
 export async function unjailUser(id) {
   const db = await getDb();
+  const userId = await storedUserId(db, id);
   await db.collection("users").updateOne(
-    { _id: id },
+    { _id: userId },
     { $set: { jailed: false, jailUntil: null } }
   );
+  invalidatePermissionCache(id);
+  invalidatePermissionCache(userId);
 }
 
 // ─── Staff Immunity ───────────────────────────────────────────────────────────
@@ -1095,18 +1102,22 @@ export async function setPlayerFields(id, fields) {
 /** Ban a user — blocks all bot commands. */
 export async function banUser(id, reason = "No reason given", bannedBy = "Owner") {
   const db = await getDb();
+  const userId = await storedUserId(db, id);
   await db.collection("users").updateOne(
-    { _id: id },
+    { _id: userId },
     { $set: { banned: true, bannedReason: reason, bannedBy, bannedAt: new Date().toISOString() } },
     { upsert: true }
   );
+  invalidatePermissionCache(id);
+  invalidatePermissionCache(userId);
 }
 
 /** Lift a ban. */
 export async function unbanUser(id) {
   const db = await getDb();
+  const userId = await storedUserId(db, id);
   await db.collection("users").updateOne(
-    { _id: id },
+    { _id: userId },
     {
       $set: {
         banned: false,
@@ -1116,6 +1127,8 @@ export async function unbanUser(id) {
       },
     },
   );
+  invalidatePermissionCache(id);
+  invalidatePermissionCache(userId);
 }
 
 /** Restore AIDORU website access without changing bot ban status. */

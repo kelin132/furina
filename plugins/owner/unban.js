@@ -6,6 +6,7 @@
 import { unbanUser, getUser } from "../economy/database.js";
 import { generateBanCard } from "../../lib/banCanvas.mjs";
 import { getProfilePic } from "../../lib/profileGen.mjs";
+import { resolveLidToJid } from "../../lib/identity.mjs";
 
 export default {
   name: "unban",
@@ -30,6 +31,7 @@ export default {
         text: "❓ *Usage:* `.unban @user`",
       }, { quoted: msg });
     }
+    targetJid = await resolveLidToJid(targetJid, sock, jid);
 
     // Load user info before clearing ban
     let userName = targetJid.split("@")[0].split(":")[0];
