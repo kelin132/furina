@@ -6,7 +6,7 @@ const READMORE = "\u200B".repeat(4000);
 
 const categoryEmojis = {
   main: "🏡", economy: "💰", guild: "⚔️", dragonball: "🐉",
-  pokemon: "🎮", ptcg: "🎴", cards: "🃏", pets: "🐾", anime: "🍡", staff: "🛡️",
+  pokemon: "🔴", ptcg: "🎴", cards: "🃏", pets: "🐾", anime: "🍡", staff: "🛡️",
   company: "🏢", games: "🎲", fun: "🎀", ai: "🪄", search: "🔎",
   image: "🎨", utilities: "🔧", download: "📥", group: "🌸", admin: "⚜️",
   owner: "👑", rpg: "🛡️", tools: "⚒️", weapons: "⚔️", armor: "🛡️",

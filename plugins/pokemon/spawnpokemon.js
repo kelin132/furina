@@ -3,13 +3,13 @@
 
 import { fetchPokemon, getImageMessage } from "../../lib/pokemon/api.mjs";
 import { getWild, setWild, clearWild, reserveWildSpawn, releaseWildSpawn } from "../../lib/pokemon/wildState.mjs";
-import { wildLevel, getMovesForType } from "../../lib/pokemon/gameLogic.mjs";
+import { getMovesForType } from "../../lib/pokemon/gameLogic.mjs";
 import { getRepel } from "../../lib/pokemon/itemState.mjs";
 
 export default {
   name: "spawnpokemon",
   aliases: ["spawnnpc", "modspawn"],
-  description: "[Mod/Owner] Spawn a specific Pokémon by name or number",
+  description: "[Mod/Owner] Spawn a chosen Pokémon at a random level from 12 to 14",
   category: "pokemon",
   usage: ".spawnpokemon <name or number>",
   isMod: true,
@@ -37,6 +37,12 @@ export default {
       }, { quoted: msg });
     }
 
+    if (args.length > 1) {
+      return sock.sendMessage(jid, {
+        text: "Custom levels are disabled. The Pokémon level is randomly chosen from 12 to 14.\nUsage: `.spawnpokemon <name or number>`",
+      }, { quoted: msg });
+    }
+
     if (!reserveWildSpawn(jid)) {
       return sock.sendMessage(jid, {
         text: "⏳ A Pokémon spawn is already being prepared for this group. Try again in a moment.",
@@ -53,7 +59,7 @@ export default {
       }, { quoted: msg });
     }
 
-    const level = parseInt(args[1]) || 20;
+    const level = 12 + Math.floor(Math.random() * 3);
     const maxHp = Math.max(10, Math.floor(apiData.baseHp * (1 + level * 0.05)));
     const wildPoke = {
       pokedexId: apiData.pokedexId,
