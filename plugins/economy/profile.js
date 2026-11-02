@@ -120,7 +120,7 @@ export default {
 
     // `.p` is the fast self-profile shortcut. The generated image does not
     // use guild/badge/trainer details, so avoid those extra database reads.
-    const isQuickProfile = cmd === "p" && target === sender;
+    const isQuickProfile = cmd === "p";
     if (target === sender && !isQuickProfile && !await requireRegistration(sock, msg, sender)) return;
 
     // `.p` uses narrow, read-only snapshots and starts all independent reads

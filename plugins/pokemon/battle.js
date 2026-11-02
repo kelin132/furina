@@ -49,6 +49,7 @@ async function sendScene(sock, jid, msg, battle, statusText, hitSide, damage, cr
       },
       round: battle.round,
       arenaId: battle.arenaId || "meadow",
+      weather: battle.weather,
       hitSide, damage, crit, statusText,
     });
     await sock.sendMessage(jid, { image: buf, caption: statusText, mentions }, { quoted: msg });
@@ -97,7 +98,7 @@ ${enemyLine}${enemyPokemon.isFusionBoss ? "\n🛡️ Fusion shield: " + (enemyPo
 
 ━━━━━━━━━━━━━━━━━━━━
 
-⚔️ Fight → \`.battle fight <1-4>\`
+⚔️ Fight → \`.battle fight <1-6>\`
 🎒 Bag → \`.battle items\`
 🔄 Switch → \`.battle switch\`${ballLine}
 🏃 Run → \`.battle run\``,
@@ -162,8 +163,8 @@ ${newMove.desc ? `📖 ${newMove.desc}` : ""}
 *Current moves:*
 ${currentList}
 
-${currentMoves.length >= 4
-  ? `❗ ${pokemon_name} already knows 4 moves. Replace one?\nReply *.learnmove <1-6>* to replace a move with *${newMove.name}*\nOr *.learnmove skip* to skip this move.`
+${currentMoves.length >= 6
+  ? `❗ ${pokemon_name} already knows 6 moves. Replace one?\nReply *.learnmove <1-6>* to replace a move with *${newMove.name}*\nOr *.learnmove skip* to skip this move.`
   : `Reply *.learnmove yes* to learn *${newMove.name}*!`}`,
   }, { quoted: msg });
 }
@@ -464,6 +465,18 @@ export default {
     const myPokemon    = isChallenger ? battle.challengerPokemon : battle.opponentPokemon;
     const enemyPokemon = isChallenger ? battle.opponentPokemon   : battle.challengerPokemon;
 
+    if (Number(myPokemon.stunnedTurns) > 0) {
+      const remaining = Math.max(0, Number(myPokemon.stunnedTurns) - 1);
+      const stunnedPokemon = { ...myPokemon, stunnedTurns: remaining };
+      updateBattle(jid, isChallenger
+        ? { challengerPokemon: stunnedPokemon, ...(battle.type === "pvp" ? { turn: "opponent" } : {}) }
+        : { opponentPokemon: stunnedPokemon, ...(battle.type === "pvp" ? { turn: "challenger" } : {}) }
+      );
+      return sock.sendMessage(jid, {
+        text: `⚡ ${myPokemon.displayName || myPokemon.name} is stunned and cannot move this turn.${remaining ? ` ${remaining} turn(s) remain.` : ""}`,
+      }, { quoted: msg });
+    }
+
     // ── RUN ──────────────────────────────────────────────────────────────────
     if (sub === "run" || sub === "flee") {
       endBattle(jid);
@@ -610,7 +623,7 @@ ${hasBalls ? `🎾 *POKÉBALLS* ${battle.type !== "wild" ? "_(wild battles only)
           const wildMoves = currentBattle.opponentPokemon.moves || [];
           if (wildMoves.length > 0) {
             const wildMove     = wildMoves[Math.floor(Math.random() * wildMoves.length)];
-            const wildDmg      = calcDamage(currentBattle.opponentPokemon, { ...myPokemon, hp: newHp }, wildMove);
+            const wildDmg      = calcDamage(currentBattle.opponentPokemon, { ...myPokemon, hp: newHp }, wildMove, currentBattle.weather);
             const wildCrit     = Math.random() < 0.0625;
             const wildFinalDmg = wildCrit ? Math.floor(wildDmg * 1.5) : wildDmg;
             const newPlayerHp  = Math.max(0, newHp - wildFinalDmg);
@@ -717,6 +730,7 @@ ${hasBalls ? `🎾 *POKÉBALLS* ${battle.type !== "wild" ? "_(wild battles only)
         masterball: "Master Ball", premierball: "Premier Ball", healball: "Heal Ball",
         duskball: "Dusk Ball", netball: "Net Ball", luxuryball: "Luxury Ball",
         quickball: "Quick Ball", beastball: "Beast Ball",
+        moonball: "Moon Ball", dreamball: "Dream Ball", cherishball: "Cherish Ball",
       };
       const pokeName = wildPokemon.displayName || wildPokemon.name;
       const userName = msg.discordChannelId
@@ -777,7 +791,7 @@ ${hasBalls ? `🎾 *POKÉBALLS* ${battle.type !== "wild" ? "_(wild battles only)
         const wildMoves = currentBattle.opponentPokemon.moves || [];
         if (wildMoves.length > 0) {
           const wildMove     = wildMoves[Math.floor(Math.random() * wildMoves.length)];
-          const wildDmg      = calcDamage(currentBattle.opponentPokemon, myPokemon, wildMove);
+          const wildDmg      = calcDamage(currentBattle.opponentPokemon, myPokemon, wildMove, currentBattle.weather);
           const wildCrit     = Math.random() < 0.0625;
           const wildFinalDmg = wildCrit ? Math.floor(wildDmg * 1.5) : wildDmg;
           const newPlayerHp  = Math.max(0, myPokemon.hp - wildFinalDmg);
@@ -903,7 +917,7 @@ Reply: \`.battle switch <slot number>\``,
         const wildMoves = currentBattle.opponentPokemon.moves || [];
         if (wildMoves.length > 0) {
           const wildMove     = wildMoves[Math.floor(Math.random() * wildMoves.length)];
-          const wildDmg      = calcDamage(currentBattle.opponentPokemon, newPoke, wildMove);
+          const wildDmg      = calcDamage(currentBattle.opponentPokemon, newPoke, wildMove, currentBattle.weather);
           const wildCrit     = Math.random() < 0.0625;
           const wildFinalDmg = wildCrit ? Math.floor(wildDmg * 1.5) : wildDmg;
           const newPlayerHp  = Math.max(0, newPoke.hp - wildFinalDmg);
@@ -997,9 +1011,10 @@ ${formatMoveList(moves)}
       }
 
       const move      = moves[moveIdx];
-      const damage = calcDamage(myPokemon, enemyPokemon, move);
+      const damage = calcDamage(myPokemon, enemyPokemon, move, battle.weather);
       const crit = Math.random() < 0.0625;
       let finalDmg = crit ? Math.floor(damage * 1.5) : damage;
+      const appliesStun = move.type === "electric" && move.power > 0 && Math.random() < 0.25;
       let shieldAbsorbed = 0;
       let shieldCharges = Number(enemyPokemon.shieldCharges || 0);
       if (enemyPokemon.isFusionBoss && shieldCharges > 0) {
@@ -1009,7 +1024,12 @@ ${formatMoveList(moves)}
       }
       const newEnemyHp = Math.max(0, (enemyPokemon.hp ?? enemyPokemon.maxHp) - finalDmg);
 
-      const updatedEnemy = { ...enemyPokemon, hp: newEnemyHp, ...(enemyPokemon.isFusionBoss ? { shieldCharges } : {}) };
+      const updatedEnemy = {
+        ...enemyPokemon,
+        hp: newEnemyHp,
+        ...(appliesStun ? { stunnedTurns: 1 } : {}),
+        ...(enemyPokemon.isFusionBoss ? { shieldCharges } : {}),
+      };
       const newState = {
         ...(isChallenger ? { opponentPokemon: updatedEnemy } : { challengerPokemon: updatedEnemy }),
         turn: isChallenger ? "opponent" : "challenger",
@@ -1029,6 +1049,9 @@ ${formatMoveList(moves)}
       // Type effectiveness line
       const eff = effectivenessText(getTypeEffectiveness(move.type, enemyPokemon.types || (enemyPokemon.primaryType ? [enemyPokemon.primaryType] : [])));
       if (eff) await sock.sendMessage(jid, { text: eff }, { quoted: msg });
+      if (appliesStun && newEnemyHp > 0) {
+        await sock.sendMessage(jid, { text: `⚡ ${eName} was stunned and will miss its next move!` }, { quoted: msg });
+      }
 
       await sleep(DELAY);
 
@@ -1063,15 +1086,35 @@ ${formatMoveList(moves)}
       if (battle.type === "wild" && updated) {
         const currentBattle = getBattle(jid);
         if (!currentBattle) return;
+        if (Number(currentBattle.opponentPokemon.stunnedTurns) > 0) {
+          const recoveredWild = { ...currentBattle.opponentPokemon, stunnedTurns: 0 };
+          const afterStun = updateBattle(jid, {
+            opponentPokemon: recoveredWild,
+            turn: "challenger",
+          });
+          await sock.sendMessage(jid, {
+            text: `⚡ Wild ${recoveredWild.displayName || recoveredWild.name} is stunned and cannot move!`,
+          }, { quoted: msg });
+          await sleep(DELAY);
+          if (afterStun) {
+            await sendBattlePrompt(sock, jid, msg, afterStun.challengerPokemon, afterStun.opponentPokemon, "wild", sender);
+          }
+          return;
+        }
         const wildMoves = currentBattle.opponentPokemon.moves || [];
         if (wildMoves.length > 0) {
           const wildMove      = wildMoves[Math.floor(Math.random() * wildMoves.length)];
           const currMyPokemon = isChallenger ? currentBattle.challengerPokemon : currentBattle.opponentPokemon;
-          const wildDmg       = calcDamage(currentBattle.opponentPokemon, currMyPokemon, wildMove);
+          const wildStunsPlayer = wildMove.type === "electric" && wildMove.power > 0 && Math.random() < 0.25;
+          const wildDmg       = calcDamage(currentBattle.opponentPokemon, currMyPokemon, wildMove, currentBattle.weather);
           const wildCrit      = Math.random() < 0.0625;
           const wildFinalDmg  = wildCrit ? Math.floor(wildDmg * 1.5) : wildDmg;
           const newPlayerHp   = Math.max(0, currMyPokemon.hp - wildFinalDmg);
-          const updatedPlayer = { ...currMyPokemon, hp: newPlayerHp };
+          const updatedPlayer = {
+            ...currMyPokemon,
+            hp: newPlayerHp,
+            ...(wildStunsPlayer && newPlayerHp > 0 ? { stunnedTurns: 1 } : {}),
+          };
           const stateAfterWild = updateBattle(jid, isChallenger
             ? { challengerPokemon: updatedPlayer, turn: "challenger" }
             : { opponentPokemon:   updatedPlayer, turn: "opponent"   }
@@ -1084,6 +1127,9 @@ ${formatMoveList(moves)}
           await sock.sendMessage(jid, {
             text: `Wild ${wildEnemyName} used ${wildMove.name} at ${myName}${wildCrit ? " ⚡ Critical hit!" : ""}`,
           }, { quoted: msg });
+          if (wildStunsPlayer && newPlayerHp > 0) {
+            await sock.sendMessage(jid, { text: `⚡ ${myName} was stunned and will miss its next move!` }, { quoted: msg });
+          }
           // Type effectiveness for wild counter
           const wildEff = effectivenessText(getTypeEffectiveness(wildMove.type, currMyPokemon.types || (currMyPokemon.primaryType ? [currMyPokemon.primaryType] : [])));
           if (wildEff) await sock.sendMessage(jid, { text: wildEff }, { quoted: msg });

@@ -133,6 +133,8 @@ export default {
           trainer: battle?.challengerTrainer,
         },
         round: 1,
+        arenaId: battle?.arenaId,
+        weather: battle?.weather,
         statusText: boss.displayName + " appeared at " + destination.name + "!",
       });
     } catch {}
@@ -144,7 +146,7 @@ export default {
       "🆚 " + boss.displayName + " (Lv." + boss.level + ")\n" +
       "❤️ " + boss.hp + "/" + boss.maxHp + "  •  🛡️ Fusion shield " + boss.shieldCharges + "/" + boss.maxShieldCharges + "\n" +
       "Special moves: " + moves + "\n\n" +
-      "Use .battle fight <1-4>, .battle switch, or .battle run. This fused Pokémon cannot be caught.";
+      "Use .battle fight <1-6>, .battle switch, or .battle run. This fused Pokémon cannot be caught.";
     const battleComponents = {};
     const mentions = msg.discordChannelId ? [] : [sender];
     if (sceneBuffer) {

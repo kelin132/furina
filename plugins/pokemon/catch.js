@@ -8,6 +8,9 @@ import { pickLeadFromParty } from "../../lib/pokemon/players.mjs";
 import { startWildBattle, hasBattle } from "../../lib/pokemon/battleState.mjs";
 import { generateBattleScene } from "../../lib/pokemon/canvas.mjs";
 import { TYPE_EMOJIS } from "../../lib/pokemon/gameLogic.mjs";
+import { readPokemonAnimation } from "../../lib/pokemon/media.mjs";
+
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 export default {
   name: "catch",
@@ -54,18 +57,41 @@ export default {
       }, { quoted: msg });
     }
 
+    // Reserve the encounter before the animation so two users cannot start
+    // parallel battles while the three-second introduction is playing.
     const battle = startWildBattle(
       jid,
       { jid: sender, username: trainer.username || msg.pushName || "Trainer", pokemon: lead },
       wild.pokemon
     );
+    if (!battle) {
+      return sock.sendMessage(jid, { text: "⚔️ This Pokémon is already being battled." }, { quoted: msg });
+    }
+
+    const appearedName = wild.pokemon.displayName || wild.pokemon.name;
+    const encounterText = `A wild ${appearedName} appeared!`;
+    try {
+      const animation = await readPokemonAnimation("catch");
+      await sock.sendMessage(jid, {
+        video: animation,
+        mimetype: "video/mp4",
+        fileName: "pokemon-encounter.mp4",
+        gifPlayback: true,
+        caption: encounterText,
+      }, { quoted: msg });
+    } catch {
+      await sock.sendMessage(jid, { text: encounterText }, { quoted: msg });
+    }
+    await sleep(3000);
 
     let sceneBuffer;
     try {
       sceneBuffer = await generateBattleScene({
-        enemy: { name: wild.pokemon.displayName || wild.pokemon.name, pokedexId: wild.pokemon.pokedexId, level: wild.pokemon.level, hp: wild.pokemon.hp, maxHp: wild.pokemon.maxHp, imageUrl: wild.pokemon.imageUrl, imageLocalPath: wild.pokemon.imageLocalPath, shiny: false },
+        enemy: { name: wild.pokemon.displayName || wild.pokemon.name, pokedexId: wild.pokemon.pokedexId, level: wild.pokemon.level, hp: wild.pokemon.hp, maxHp: wild.pokemon.maxHp, imageUrl: wild.pokemon.imageUrl, imageLocalPath: wild.pokemon.imageLocalPath, shiny: Boolean(wild.pokemon.shiny), primaryType: wild.pokemon.primaryType },
         player: { name: lead.displayName || lead.name, pokedexId: lead.pokedexId, level: lead.level, hp: lead.hp, maxHp: lead.maxHp, imageUrl: lead.backImageUrl || lead.imageUrl, shiny: lead.shiny, trainer: battle.challengerTrainer },
         round: 1,
+        arenaId: battle.arenaId,
+        weather: battle.weather,
         statusText: `${lead.displayName || lead.name} vs Wild ${wild.pokemon.displayName || wild.pokemon.name}!`,
       });
     } catch {}
@@ -92,7 +118,7 @@ ${wildTypeEmoji} Wild ${wildName}
 
 ━━━━━━━━━━━━━━━━━━━━
 
-⚔️ Fight → \`.battle fight <1-4>\`
+⚔️ Fight → \`.battle fight <1-6>\`
 🎒 Bag → \`.battle items\`
 🔄 Switch → \`.battle switch\`
 🔴 Pokéball → \`.battle pokeball (type)\`

@@ -9,7 +9,7 @@ const categoryEmojis = {
   pokemon: "🔴", ptcg: "🎴", cards: "🃏", pets: "🐾", anime: "🍡", staff: "🛡️",
   company: "🏢", games: "🎲", fun: "🎀", ai: "🪄", search: "🔎",
   image: "🎨", utilities: "🔧", download: "📥", group: "🌸", admin: "⚜️",
-  owner: "👑", rpg: "🛡️", tools: "⚒️", weapons: "⚔️", armor: "🛡️",
+  owner: "👑", tools: "⚒️", weapons: "⚔️", armor: "🛡️",
   potions: "🧪", consumables: "🍱", scrolls: "📜", cosmetics: "💍",
   exchange: "⚖️", gacha: "💎", bases: "🏠",
 };
@@ -17,7 +17,7 @@ const categoryEmojis = {
 const categoryTitles = {
   main: "MAIN", economy: "ECONOMY", guild: "GUILD", pets: "PETS",
   cards: "CARDS", ptcg: "POKÉMON TCG POCKET", pokemon: "POKEMON", dragonball: "DRAGON BALL",
-  rpg: "RPG ADVENTURE", games: "GAMES", fun: "FUN", ai: "AI",
+  games: "GAMES", fun: "FUN", ai: "AI",
   search: "SEARCH", image: "IMAGE", utilities: "UTILITIES",
   download: "DOWNLOAD", group: "GROUP", anime: "ANIME",
   staff: "STAFF", owner: "OWNER", company: "COMPANY",
@@ -49,7 +49,10 @@ function renderDetailedCommand(plugin, menuPrefix) {
   const aliasLine = aliases.length ? `\n│   ◇ Also: ${aliases.join("  ·  ")}` : "";
   const usage = formatUsage(plugin.usage, menuPrefix);
   const usageLine = usage ? `\n│   ↳ ${usage}` : "";
-  const description = plugin.description || "Explore this command in your trainer journey.";
+  const fullDescription = plugin.description || "Explore this command in your trainer journey.";
+  const description = plugin.category === "group"
+    ? fullDescription.split(/[\n.!?]/, 1)[0].trim() || "Group command."
+    : fullDescription;
 
   return `│ ✦ *${command}*${aliasLine}\n│   ${description}${usageLine}`;
 }
@@ -97,7 +100,7 @@ export default {
     const showStaff = isOwner || isStaff || isMod;
     const order = [
       "main", "economy", "company", "guild", "pets", "cards", "ptcg",
-      "pokemon", "dragonball", "dbz", "rpg", "games", "fun", "ai", "search", "media",
+      "pokemon", "dragonball", "dbz", "games", "fun", "ai", "search", "media",
       "image", "utilities", "download", "group", "admin", "anime",
       "tools", "weapons", "armor", "potions", "consumables", "scrolls",
       "cosmetics", "exchange", "gacha", "bases",

@@ -183,8 +183,8 @@ ${newMove.desc ? `📖 ${newMove.desc}` : ""}
 *Current moves:*
 ${currentList}
 
-${currentMoves.length >= 4
-  ? `❗ Already knows 4 moves. Replace one?\nReply *.learnmove <1-4>* to replace, or *.learnmove cancel* to skip.`
+${currentMoves.length >= 6
+  ? `❗ Already knows 6 moves. Replace one?\nReply *.learnmove <1-6>* to replace, or *.learnmove cancel* to skip.`
   : `Reply *.learnmove yes* to learn *${newMove.name}*!`}`
         );
       }

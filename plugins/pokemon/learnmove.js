@@ -36,9 +36,9 @@ export default {
 
     // "yes" — auto-append the move when there's still a free slot
     if (choice === "yes") {
-      if (state.currentMoves.length >= 4) {
+      if (state.currentMoves.length >= 6) {
         return sock.sendMessage(jid, {
-          text: `❗ *${state.pokemonName}* already knows 4 moves.\nReply *.learnmove <1-4>* to replace one, or *.learnmove cancel* to skip.`,
+        text: `❗ *${state.pokemonName}* already knows 6 moves.\nReply *.learnmove <1-6>* to replace one, or *.learnmove cancel* to skip.`,
         }, { quoted: msg });
       }
       const newMoves = [...state.currentMoves, state.newMove];

@@ -93,6 +93,9 @@ export default {
       let buf;
       try {
         buf = await generateBattleScene({
+          round: 1,
+          arenaId: battle.arenaId,
+          weather: battle.weather,
           player: {
             name: challengerLead.displayName || challengerLead.name,
             pokedexId: challengerLead.pokedexId,

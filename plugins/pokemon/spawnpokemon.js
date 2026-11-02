@@ -74,6 +74,7 @@ export default {
       defense: Math.max(5, Math.floor(apiData.baseDefense * (1 + level * 0.05))),
       speed: Math.max(5, Math.floor(apiData.baseSpeed * (1 + level * 0.05))),
       imageUrl: apiData.imageUrl,
+      shiny: Math.random() < 0.005,
       moves: getMovesForType(apiData.primaryType, apiData.types, level),
     };
 
@@ -87,7 +88,7 @@ export default {
     const summonCaption =
 `✨ *A SPECIAL POKÉMON WAS SUMMONED!*
 
-🐾 Name: *${wildPoke.displayName}*
+🐾 Name: *${wildPoke.displayName}${wildPoke.shiny ? " ✨ SHINY" : ""}*
 🏷️ Type: ${typeStr}
 📊 Level: ${level}
 ❤️ HP: ${maxHp}/${maxHp}
