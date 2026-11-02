@@ -8,7 +8,7 @@ export default {
   usage: ".gpp (reply to an image) | .gpp remove",
   aliases: ["setgcpp"],
   cooldown: 5,
-  isAdmin: true,
+  isAdmin: true, 
 
   async run({ sock, msg, text }) {
     const jid = msg.key.remoteJid;
@@ -26,8 +26,14 @@ export default {
         msg.key.participant || msg.key.remoteJid,
         msg.key.participantAlt || msg.key.remoteJidAlt || "",
       );
+      
       if (!roles.botIsAdmin) {
         return sock.sendMessage(jid, { text: "The bot must be a group admin first." }, { quoted: msg });
+      }
+
+      // Check if the user executing the command is a group admin
+      if (!roles.isSenderAdmin) {
+        return sock.sendMessage(jid, { text: "This command can only be used by group admins." }, { quoted: msg });
       }
 
       if (String(text || "").trim().toLowerCase() === "remove") {
@@ -56,7 +62,7 @@ export default {
     } catch (error) {
       console.error("[gpp] group picture update failed:", error);
       return sock.sendMessage(jid, {
-        text: "Couldn't update the group picture. Check the bot's admin permission and try again.",
+        text: "Couldn't update the picture. Check permissions and try again.",
       }, { quoted: msg });
     }
   },
