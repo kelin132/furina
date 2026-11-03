@@ -16,7 +16,7 @@ export default {
 
 ✨ Need help or want updates? Join our official community below!
 
-🔗 https://chat.whatsapp.com/LPAJoRnzzdaKkHAyBGQytg`;
+🔗 https://chat.whatsapp.com/CfU4bt6JL0iGhXgjZfS9qt`;
 
       await sock.sendMessage(
         msg.key.remoteJid,
@@ -29,7 +29,7 @@ export default {
               mediaType: 1,
               previewType: 0,
               thumbnailUrl: "https://cdn.phototourl.com/member/2026-10-15-2d9bc601-85a4-47d1-9483-d0b34859e118.jpg",
-              sourceUrl: "https://chat.whatsapp.com/LPAJoRnzzdaKkHAyBGQytg",
+              sourceUrl: "https://chat.whatsapp.com/CfU4bt6JL0iGhXgjZfS9qt",
               renderLargerThumbnail: true
             }
           }
