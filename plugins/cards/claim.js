@@ -1,7 +1,9 @@
-import { findOrCreateUser } from "./db.js";
+import { findOrCreateUser, getUser as getCardUser } from "./db.js";
+import { addHistory, addMoney, debitWalletIfAvailable } from "../economy/database.js";
 import { formatCardLabel, sendCardMedia } from "../../lib/cardApi.mjs";
 import { getCardClaimId as getClaimId, matchesCardClaimId as matchesClaimId } from "../../lib/cardClaimId.mjs";
 import { ownsCardSpawnClaim, releaseCardSpawnClaim, reserveCardSpawnClaim } from "../../lib/cardSpawnClaim.mjs";
+import { persistChargedCardClaim } from "../../lib/cardClaimPayment.mjs";
 
 const activeSpawns = global.activeSpawns || (global.activeSpawns = {});
 
@@ -23,7 +25,11 @@ function toOwnedCard(card, spawnId) {
   };
 }
 
-function claimText(card) {
+function claimText(card, purchase = null) {
+  if (purchase) {
+    return `✅ ${formatCardLabel(card)} claimed for $${purchase.cost.toLocaleString()}.\n` +
+      `👛 Wallet: $${purchase.wallet.toLocaleString()}. Use \`.col\` to view it.`;
+  }
   return `✅ ${formatCardLabel(card)} claimed. Use \`.col\` to view it.`;
 }
 
@@ -31,7 +37,7 @@ export default {
   name: "claim",
   aliases: ["collect"],
   category: "cards",
-  description: "Claim your pending summon or spawned card",
+  description: "Claim a paid card or a spawned card",
   usage: ".claim [number]",
 
   async run({ sock, msg, args, sender }) {
@@ -64,7 +70,7 @@ export default {
       user.cards = Array.isArray(user.cards) ? user.cards : [];
       user.pendingCards = Array.isArray(user.pendingCards) ? user.pendingCards : [];
 
-      // Personal pending claims created by .summon.
+      // Personal pending cards were already paid for when they were created.
       const numericPending = cardIdInput
         ? user.pendingCards.find((card) => matchesClaimId(card, cardIdInput))
         : null;
@@ -103,7 +109,7 @@ export default {
       }
 
       // Preserve the existing chat-wide auto-spawn claim flow.
-      if (!cardIdInput) return reply("❌ No pending summon or card spawn.\n\nUse \`.claim <number>\` for a chat spawn.");
+      if (!cardIdInput) return reply("❌ No pending card or card spawn.\n\nUse \`.claim <number>\` for a chat spawn.");
       const spawn = activeSpawns[jid];
       if (!spawn) return reply("❌ No active card spawn in this chat.");
       if (!matchesClaimId({ ...(spawn.card || {}), cardId: spawn.card?.cardId || spawn.cardId }, cardIdInput)) {
@@ -122,16 +128,46 @@ export default {
         return reply("⏳ This card is already being claimed. The first correct claim gets it.");
       }
 
-      user.cards.push(toOwnedCard(card, spawn.spawnId));
-      user.totalCards = (user.totalCards || 0) + 1;
-      await user.save();
+      const cost = Number(card.price);
+      if (!Number.isSafeInteger(cost) || cost <= 0) {
+        return reply("❌ This card has no valid value and cannot be claimed.");
+      }
+      const ownedCard = toOwnedCard(card, spawn.spawnId);
+      const payment = await persistChargedCardClaim({
+        debit: () => debitWalletIfAvailable(sender, cost),
+        saveCard: async () => {
+          user.cards.push(ownedCard);
+          user.totalCards = (user.totalCards || 0) + 1;
+          await user.save();
+        },
+        hasCard: async () => {
+          const latest = await getCardUser(sender);
+          return latest?.cards?.some((owned) =>
+            String(owned?.spawnId || "") === String(spawn.spawnId),
+          ) === true;
+        },
+        refund: () => addMoney(sender, cost),
+      });
+      if (payment.status === "insufficient") {
+        return reply(`❌ Not enough money. This card costs $${cost.toLocaleString()}.`);
+      }
+      if (payment.status !== "saved") {
+        console.error("[claim] card payment could not be confirmed:", payment.error || payment.refundError);
+        return reply(payment.status === "refunded"
+          ? `❌ The card could not be saved. $${cost.toLocaleString()} was refunded.`
+          : "⚠️ The claim could not be confirmed. Check your cards and wallet before retrying.");
+      }
+      await addHistory(sender, "card_claim", -cost, `Claimed ${card.name || "card"}`).catch(() => {});
       if (activeSpawns[jid] === spawn && ownsCardSpawnClaim(spawn, spawnReservation)) {
         delete activeSpawns[jid];
       }
       reservedSpawn = null;
       spawnReservation = null;
 
-      const text = claimText(card);
+      const text = claimText(card, {
+        cost,
+        wallet: Number(payment.wallet?.money) || 0,
+      });
       if (card.media) {
         try {
           return await sendCardMedia(sock, jid, card, text, { quoted: msg, mentions: [sender] });

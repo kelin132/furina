@@ -3,7 +3,7 @@ import { isSpawnEnabled, setSpawnEnabled } from "./db.js";
 export default {
   name: "cardspawn",
   aliases: ["spawncard", "cardauto"],
-  description: "Enable or disable automatic card spawning every 20–25 minutes (group admins only)",
+  description: "Enable or disable automatic card spawning every 12–15 minutes",
   category: "cards",
   usage: ".cardspawn on | .cardspawn off | .cardspawn status",
   isAdmin: true,
@@ -22,7 +22,7 @@ export default {
     if (sub === "status") {
       const enabled = await isSpawnEnabled(chatId);
       await sock.sendMessage(chatId, {
-        text: `🃏 *Auto Card Spawn*\n\nStatus: ${enabled ? "✅ *ON*" : "❌ *OFF*"}\nInterval: every *20–25 minutes*\n\nUse *.cardspawn on* / *.cardspawn off* to change.`,
+        text: `🃏 *Auto Card Spawn*\n\nStatus: ${enabled ? "✅ *ON*" : "❌ *OFF*"}\nInterval: every *12–15 minutes*\n\nUse *.cardspawn on* / *.cardspawn off* to change.`,
       }, { quoted: msg });
       return;
     }
@@ -31,7 +31,7 @@ export default {
       await setSpawnEnabled(chatId, true);
       await sock.sendMessage(chatId, {
         text:
-          `Card spawning is now on. A card will appear every *20–25 minutes*; use *.claim <number>* to collect it.`,
+          `Card spawning is now on. A card will appear every *12–15 minutes*; use *.claim <number>* to collect it.`,
       }, { quoted: msg });
       return;
     }

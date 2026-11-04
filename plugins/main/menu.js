@@ -49,10 +49,14 @@ function renderDetailedCommand(plugin, menuPrefix) {
   const aliasLine = aliases.length ? `\n│   ◇ Also: ${aliases.join("  ·  ")}` : "";
   const usage = formatUsage(plugin.usage, menuPrefix);
   const usageLine = usage ? `\n│   ↳ ${usage}` : "";
-  const fullDescription = plugin.description || "Explore this command in your trainer journey.";
-  const description = plugin.category === "group"
-    ? fullDescription.split(/[\n.!?]/, 1)[0].trim() || "Group command."
-    : fullDescription;
+  const fullDescription = plugin.description || "Command help.";
+  const firstSentence = fullDescription
+    .split(/\n/, 1)[0]
+    .split(/[.!?]\s+/, 1)[0]
+    .trim() || "Command help.";
+  const description = firstSentence.length > 110
+    ? `${firstSentence.slice(0, 107).trimEnd()}…`
+    : firstSentence;
 
   return `│ ✦ *${command}*${aliasLine}\n│   ${description}${usageLine}`;
 }

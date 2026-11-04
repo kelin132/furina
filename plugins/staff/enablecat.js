@@ -25,38 +25,12 @@ const ALL_CATS = [
   "group", "anime", "staff", "owner",
 ];
 
-const categoryEmojis = {
-  main:       "🏡",
-  economy:    "💰",
-  guild:      "⚔️",
-  dragonball: "🐉",
-  pokemon:    "🎮",
-  cards:      "🃏",
-  pets:       "🐾",
-  anime:      "🍡",
-  staff:      "🛡️",
-  company:    "🏢",
-  games:      "🎲",
-  fun:        "🎀",
-  ai:         "🪄",
-  search:     "🔎",
-  image:      "🎨",
-  utilities:  "🔧",
-  download:   "📥",
-  group:      "🌸",
-  owner:      "👑",
-};
-
-function getEmoji(cat) {
-  return categoryEmojis[cat] || "📌";
-}
-
 export default {
   name: "enablecat",
   aliases: ["disablecat", "togglecat", "catcontrol"],
   description: "Enable or disable a command category in this group",
   category: "staff",
-  usage: ".enablecat <category|numbers...> | .disablecat <category|numbers...>",
+  usage: ".enablecat <category or number> | .disablecat <category or number>",
   isMod: true,
   cooldown: 3,
 
@@ -75,23 +49,17 @@ export default {
     // ── No args: show status list ─────────────────────────────────────────
     if (!args.length) {
       const lines = ALL_CATS.map((cat, index) => {
-        const emoji       = getEmoji(cat);
         const isProtected = PROTECTED_CATS.has(cat);
         const isDisabled  = disabled.has(cat);
-        const statusIcon  = isProtected ? "🔒 Protected" : isDisabled ? "❌ Disabled" : "✅ Enabled";
-        return `│ *${index + 1}.* ${emoji} *${cat}* — ${statusIcon}`;
+        const status = isProtected ? "protected" : isDisabled ? "disabled" : "enabled";
+        return `${index + 1}. ${cat} — ${status}`;
       });
 
       return sock.sendMessage(jid, {
-        text:
-`╭─🛡️「 *CATEGORY CONTROL* 」─╮
-${lines.join("\n")}
-│
-│ *.enablecat <cat|numbers...>*  — enable categories
-│ *.disablecat <cat|numbers...>* — disable categories
-│ Example: *.disablecat 2 5 9*
-│ 🔒 Protected categories cannot be disabled
-╰─────────────────────────────❀`,
+        text: `Category settings\n\n${lines.join("\n")}\n\n` +
+          ".enablecat <category or number>\n" +
+          ".disablecat <category or number>\n" +
+          `Protected: ${[...PROTECTED_CATS].join(", ")}`,
       }, { quoted: msg });
     }
 
@@ -120,7 +88,7 @@ ${lines.join("\n")}
     if (!validTargets.length || !changedTargets.length) {
       return sock.sendMessage(jid, {
         text: [
-          "❌ No change was made.",
+          "No changes made.",
           unknown.length ? `Unknown categories/numbers: ${[...new Set(unknown)].join(", ")}` : "",
           protectedTargets.length
             ? `Protected categories cannot be disabled: ${protectedTargets.join(", ")}`
@@ -140,23 +108,17 @@ ${lines.join("\n")}
     }
     groupSettings.set(jid, { disabledCategories: [...disabled] });
 
-    const statusIcon = enable ? "✅ *ENABLED*" : "❌ *DISABLED*";
-    const changedText = changedTargets.map(target => `${getEmoji(target)} ${target}`).join(", ");
+    const changedText = changedTargets.join(", ");
     const notes = [
-      `╭─${enable ? "✅" : "❌"}「 *CATEGORIES UPDATED* 」─╮`,
-      `│ ${statusIcon}`,
-      `│ ${changedText}`,
+      `${enable ? "Enabled" : "Disabled"}: ${changedText}`,
       protectedTargets.length
-        ? `│ 🔒 Skipped protected: ${protectedTargets.join(", ")}`
+        ? `Skipped protected: ${protectedTargets.join(", ")}`
         : "",
       unknown.length
-        ? `│ ⚠️ Unknown: ${[...new Set(unknown)].join(", ")}`
+        ? `Unknown: ${[...new Set(unknown)].join(", ")}`
         : "",
-      "│",
-      enable
-        ? "│ These commands are now available."
-        : "│ These commands are now blocked.\n│ Staff and owner still have full access.",
-      "╰─────────────────────────────❀",
+      enable ? "These commands are available." : "These commands are blocked for members.",
+      !enable ? "Staff and owner can still use them." : "",
     ];
 
     await sock.sendMessage(jid, {
