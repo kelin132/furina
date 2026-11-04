@@ -111,15 +111,37 @@ export function resolveProfileImageSources({ cardUser, user, profilePicFromSocke
     typeof value === "string" &&
     (/^https?:\/\//i.test(value) ||
       /^data:image\/(?:png|jpe?g|webp|gif);base64,[A-Za-z0-9+/]+={0,2}$/i.test(value));
-  const savedAvatar = cardUser?.websiteProfileUpdatedAt
-    ? (isSupportedImage(cardUser.profilePictureUrl) ? cardUser.profilePictureUrl : null)
-    : [cardUser?.profilePictureUrl, cardUser?.profileImage, cardUser?.avatarUrl].find(isSupportedImage);
+  const userImageFields = ["profilePictureUrl", "profileImage", "avatarUrl"];
+  const hasUserImage = user && userImageFields.some((field) =>
+    Object.prototype.hasOwnProperty.call(user, field),
+  );
+  const savedAvatar = hasUserImage
+    ? userImageFields.map((field) => user[field]).find(isSupportedImage)
+    : cardUser?.websiteProfileUpdatedAt
+      ? (isSupportedImage(cardUser.profilePictureUrl) ? cardUser.profilePictureUrl : null)
+      : [cardUser?.profilePictureUrl, cardUser?.profileImage, cardUser?.avatarUrl].find(isSupportedImage);
   return {
     profilePic: savedAvatar || profilePicFromSocket || null,
-    profileBackground: cardUser?.websiteProfileUpdatedAt
-      ? cardUser.profileBackground || null
-      : cardUser?.profileBackground || user?.profileBackground || null,
+    profileBackground: user?.websiteProfileUpdatedAt
+      ? user.profileBackground || null
+      : cardUser?.websiteProfileUpdatedAt
+        ? cardUser.profileBackground || null
+        : cardUser?.profileBackground || user?.profileBackground || null,
   };
+}
+
+export function resolveProfileVideoSource({ cardUser, user }) {
+  const fields = ["avatarVideo", "avatarVideoUrl", "profileVideoUrl", "profileVideo"];
+  const hasUserVideo = user && fields.some((field) =>
+    Object.prototype.hasOwnProperty.call(user, field),
+  );
+  const userVideo = fields
+    .map((field) => user?.[field])
+    .find((value) => typeof value === "string" && /^https?:\/\//i.test(value));
+  if (userVideo || hasUserVideo) return userVideo || null;
+  return fields
+    .map((field) => cardUser?.[field])
+    .find((value) => typeof value === "string" && /^https?:\/\//i.test(value)) || null;
 }
 
 export default {
@@ -148,8 +170,12 @@ export default {
     // Both profile commands use a compact card snapshot so website media and
     // card counts stay current without loading the full card collection.
     const cardUserPromise = getUserProfileSummary(target);
-    const profilePicPromise = cardUserPromise.then((cardUser) => {
+    const userPromise = isQuickProfile ? getQuickProfileUser(target) : getUser(target);
+    const profilePicPromise = Promise.all([cardUserPromise, userPromise]).then(([cardUser, user]) => {
       const savedAvatar = [
+        user?.profilePictureUrl,
+        user?.profileImage,
+        user?.avatarUrl,
         cardUser?.profilePictureUrl,
         cardUser?.profileImage,
         cardUser?.avatarUrl,
@@ -160,7 +186,7 @@ export default {
     });
     const [cardUser, user, profilePicFromSocket, pokemonCount, guild, trainer] = await Promise.all([
       cardUserPromise,
-      isQuickProfile ? getQuickProfileUser(target) : getUser(target),
+      userPromise,
       profilePicPromise,
       countTrainerPokemon(target),
       isQuickProfile ? Promise.resolve(null) : withTimeout(guildSystem.getUserPrimaryGuild(target), 2500),
@@ -172,17 +198,18 @@ export default {
       user,
       profilePicFromSocket,
     });
-    const profileVideo = [cardUser?.avatarVideo, cardUser?.avatarVideoUrl, cardUser?.profileVideoUrl]
-      .find((value) => typeof value === "string" && /^https?:\/\//i.test(value)) || null;
+    const profileVideo = resolveProfileVideoSource({ cardUser, user });
 
     const tag   = target.split("@")[0].split(":")[0];
     const level = user.level ?? 1;
     const xp    = user.xp    ?? 0;
     const registeredName = String(user.name || "User").trim() || "User";
     const cardsOwned = cardUser?.cardsCount ?? 0;
-    const profileFrame = cardUser?.websiteProfileUpdatedAt
-      ? cardUser.profileFrame ?? "none"
-      : user.profileFrame ?? cardUser?.profileFrame ?? null;
+    const profileFrame = user?.websiteProfileUpdatedAt
+      ? user.profileFrame ?? "none"
+      : cardUser?.websiteProfileUpdatedAt
+        ? cardUser.profileFrame ?? "none"
+        : user.profileFrame ?? cardUser?.profileFrame ?? null;
     const history = Array.isArray(user.history) ? user.history : [];
     const gameTypes = new Set(["bet", "coinflip", "slots", "roulette", "scratch", "gamble"]);
     const casinoTypes = new Set(["slots", "roulette", "scratch", "gamble"]);

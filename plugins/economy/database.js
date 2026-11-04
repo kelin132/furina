@@ -286,6 +286,8 @@ export async function getQuickProfileUser(id) {
     "profileBackground", "profileFrame", "age", "birthday", "lastDaily",
     "streak", "reach", "diamonds", "staffLevel", "isPremium",
     "registeredAt", "guildName", "guild", "inventory",
+    "profilePictureUrl", "profileImage", "avatarUrl", "avatarVideo",
+    "avatarVideoUrl", "profileVideoUrl", "profileVideo", "websiteProfileUpdatedAt",
   ];
   const projection = Object.fromEntries(fields.map((field) => [field, 1]));
   const user = await findUserByIdentity(id, { projection });
