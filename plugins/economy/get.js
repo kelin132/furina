@@ -35,20 +35,7 @@ export default {
     // ── No code provided ───────────────────────────────────────────────────
     if (!code) {
       return sock.sendMessage(jid, {
-        text:
-`╭━━━〔 🎁 𝑪𝑳𝑨𝑰𝑴 𝑪𝑶𝑫𝑬 💸 〕━━━╮
-┃
-┃ ✦ Redeem an owner-issued code
-┃   to receive free money!
-┃
-┣━━━━━━━━━━━━━━━━━━━━
-┃ 📌 Usage  › .get <code>
-┃ 📌 Alias  › .redeem <code>
-┣━━━━━━━━━━━━━━━━━━━━
-┃ 👀 Watch for code drops
-┃    from the owner!
-╰━━━━━━━━━━━━━━━━━━━━╯
-💸✨ Free Money Awaits ✨💸`
+        text: "Usage: .get <code> to redeem an owner-issued code.",
       }, { quoted: msg });
     }
 
@@ -57,20 +44,7 @@ export default {
 
     if (!doc) {
       return sock.sendMessage(jid, {
-        text:
-`╭━━━〔 ❌ 𝑰𝑵𝑽𝑨𝑳𝑰𝑫 𝑪𝑶𝑫𝑬 ❌ 〕━━━╮
-┃
-┃ ✦ Code not recognised!
-┃
-┣━━━━━━━━━━━━━━━━━━━━
-┃ 🔑 Code   › ${code}
-┃ ❓ Status › Not Found
-┣━━━━━━━━━━━━━━━━━━━━
-┃ • Double-check the code
-┃ • Codes are case-insensitive
-┃ • Stay active for new drops!
-╰━━━━━━━━━━━━━━━━━━━━╯
-🌸 Better luck next time! 🌸`
+        text: `❌ Code ${code} was not found.`,
       }, { quoted: msg });
     }
 
@@ -78,60 +52,22 @@ export default {
 
     // ── Check expiry ───────────────────────────────────────────────────────
     if (doc.expiry < now) {
-      const expStr = new Date(doc.expiry).toDateString();
       return sock.sendMessage(jid, {
-        text:
-`╭━━━〔 ⛔ 𝑪𝑶𝑫𝑬 𝑬𝑿𝑷𝑰𝑹𝑬𝑫 ⛔ 〕━━━╮
-┃
-┃ ✦ This code is no longer active.
-┃
-┣━━━━━━━━━━━━━━━━━━━━
-┃ 🔑 Code    › ${code}
-┃ 📅 Expired › ${expStr}
-┣━━━━━━━━━━━━━━━━━━━━
-┃ 👀 Watch for fresh codes
-┃    from the owner!
-╰━━━━━━━━━━━━━━━━━━━━╯
-⏳✨ Too Late This Time ✨⏳`
+        text: `❌ Code ${code} has expired.`,
       }, { quoted: msg });
     }
 
     // ── Check max uses ─────────────────────────────────────────────────────
     if (doc.maxUses !== null && doc.uses >= doc.maxUses) {
       return sock.sendMessage(jid, {
-        text:
-`╭━━━〔 🔒 𝑭𝑼𝑳𝑳𝒀 𝑪𝑳𝑨𝑰𝑴𝑬𝑫 🔒 〕━━━╮
-┃
-┃ ✦ Everyone has grabbed this one!
-┃
-┣━━━━━━━━━━━━━━━━━━━━
-┃ 🔑 Code    › ${code}
-┃ 🔢 Claims  › ${doc.uses}/${doc.maxUses}
-┃ 📊 Status  › 『 MAXED OUT 』
-┣━━━━━━━━━━━━━━━━━━━━
-┃ 🔥 Stay alert for the
-┃    next code drop!
-╰━━━━━━━━━━━━━━━━━━━━╯
-💨✨ Missed This One ✨💨`
+        text: `❌ Code ${code} has reached its claim limit.`,
       }, { quoted: msg });
     }
 
     // ── Check if already claimed ───────────────────────────────────────────
     if (doc.claimedBy?.includes(sender)) {
       return sock.sendMessage(jid, {
-        text:
-`╭━━━〔 ⚠️ 𝑨𝑳𝑹𝑬𝑨𝑫𝒀 𝑪𝑳𝑨𝑰𝑴𝑬𝑫 ⚠️ 〕━━━╮
-┃
-┃ ✦ You already redeemed this code!
-┃
-┣━━━━━━━━━━━━━━━━━━━━
-┃ 🔑 Code   › ${code}
-┃ 📌 Limit  › Once per user
-┣━━━━━━━━━━━━━━━━━━━━
-┃ 🔥 Watch for the next
-┃    code from the owner!
-╰━━━━━━━━━━━━━━━━━━━━╯
-🌸✨ One Per Customer ✨🌸`
+        text: `❌ You already claimed code ${code}.`,
       }, { quoted: msg });
     }
 
@@ -155,14 +91,7 @@ export default {
 
     if (!result) {
       return sock.sendMessage(jid, {
-        text:
-`╭━━━〔 ❌ 𝑪𝑳𝑨𝑰𝑴 𝑭𝑨𝑰𝑳𝑬𝑫 ❌ 〕━━━╮
-┃
-┃ ✦ Could not claim right now.
-┃   The code may have just been
-┃   fully redeemed. Try again!
-╰━━━━━━━━━━━━━━━━━━━━╯
-⚡ Please try again shortly ⚡`
+        text: `❌ Code ${code} could not be claimed. It may have expired or reached its limit.`,
       }, { quoted: msg });
     }
 
@@ -177,33 +106,10 @@ export default {
     await saveUser(sender, user);
     await addHistory(sender, "get", amount, `Claimed code ${code}`);
 
-    const expStr      = new Date(doc.expiry).toDateString();
-    const usesDisplay = doc.maxUses
-      ? `${result.uses}/${doc.maxUses}`
-      : `${result.uses}/∞`;
-
-    let text =
-`╭━━━〔 🎁 𝑪𝑶𝑫𝑬 𝑹𝑬𝑫𝑬𝑬𝑴𝑬𝑫 💰 〕━━━╮
-┃
-┃ ✦ Code accepted — money incoming!
-┃
-┃ 🔑 Code    ➜ 『 ${code} 』
-┃
-┣━━━━━━━━━━━━━━━━━━━━
-┃ 💰 Received › $${amount.toLocaleString()}
-┃ 🔮 XP Bonus › +50
-┃ 💰 Balance  › $${user.money.toLocaleString()}
-┣━━━━━━━━━━━━━━━━━━━━
-┃ 📅 Expires  › ${expStr}
-┃ 🔢 Claims   › ${usesDisplay}
-┣━━━━━━━━━━━━━━━━━━━━
-┃ 🎉 𝐒𝐔𝐂𝐂𝐄𝐒𝐒!!
-┃ Your wallet has been credited!
-╰━━━━━━━━━━━━━━━━━━━━╯
-🌸✨ Money Secured ✨🌸`;
+    let text = `✅ Code ${code} claimed. $${amount.toLocaleString()} added to your wallet. Balance: $${user.money.toLocaleString()}.`;
 
     if (leveled) {
-      text += `\n\n╭━━━〔 🎊 𝑳𝑬𝑽𝑬𝑳 𝑼𝑷 🎊 〕━━━╮\n┃ ⚡ You are now Level ${user.level}!\n╰━━━━━━━━━━━━━━━━━━━━╯`;
+      text += ` Level up! You are now level ${user.level}.`;
     }
 
     await sock.sendMessage(jid, { text }, { quoted: msg });

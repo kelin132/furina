@@ -972,7 +972,12 @@ export async function getStaffMembers() {
   // Keep this list focused: .mods only needs identity and role fields, and
   // projecting avoids transferring large economy documents for every refresh.
   return db.collection("users").find(
-    { staffLevel: { $gte: 1 } },
+    {
+      $or: [
+        { staffLevel: { $gte: 1 } },
+        { staffLevel: { $in: ["1", "2", "3", "99"] } },
+      ],
+    },
     {
       projection: {
         _id: 1,

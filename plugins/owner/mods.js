@@ -13,33 +13,6 @@ import {
   storedRealNumber,
 } from '../../lib/staffNumbers.mjs';
 
-const CACHE_TTL_MS = 5_000;
-let staffCache = null;
-let staffCacheAt = 0;
-let staffCacheInFlight = null;
-
-async function getCachedStaffMembers() {
-  if (staffCache && Date.now() - staffCacheAt < CACHE_TTL_MS) return staffCache;
-  if (staffCacheInFlight) return staffCacheInFlight;
-
-  staffCacheInFlight = getStaffMembers()
-    .then((members) => {
-      staffCache = Array.isArray(members) ? members : [];
-      staffCacheAt = Date.now();
-      return staffCache;
-    })
-    .catch(() => {
-      staffCache = [];
-      staffCacheAt = Date.now();
-      return staffCache;
-    })
-    .finally(() => {
-      staffCacheInFlight = null;
-    });
-
-  return staffCacheInFlight;
-}
-
 function cleanName(name, number) {
   const value = String(name || "").trim();
   return value && bareNumber(value) !== bareNumber(number) ? value : "";
@@ -62,7 +35,7 @@ function commandSelector(msg) {
 async function buildRoster(sock, jid, data) {
   const ownerNumbers = getOwnerNumbers();
   const [dbStaff, currentGroupNumbers] = await Promise.all([
-    getCachedStaffMembers(),
+    getStaffMembers(),
     jid?.endsWith("@g.us") ? getGroupNumberMap(sock, jid) : Promise.resolve(new Map()),
   ]);
   const sourceNumbers = [
@@ -148,8 +121,7 @@ async function buildRoster(sock, jid, data) {
   );
   return {
     numberMap: cleanNumMap,
-    owners: sorted.filter((member) => member.isOwner),
-    admins: sorted.filter((member) => !member.isOwner && member.level >= 3),
+    owners: sorted.filter((member) => member.isOwner || member.level >= 3),
     staff: sorted.filter((member) => !member.isOwner && member.level === 2),
     mods: sorted.filter((member) => !member.isOwner && member.level <= 1),
   };
@@ -163,14 +135,15 @@ export default {
   aliases:     ['removemod', 'modlist'],
   cooldown:    5,
   isOwner:     false,
+  public:      true,
 
-  async run({ sock, msg, cmd }) {
+  async run({ sock, msg, cmd, isOwner }) {
     const jid  = msg.key.remoteJid;
     const data = getModsData();
 
     if (cmd === 'mods' || cmd === 'modlist') {
-      const { owners, admins, staff, mods } = await buildRoster(sock, jid, data);
-      if (!owners.length && !admins.length && !staff.length && !mods.length) {
+      const { owners, staff, mods } = await buildRoster(sock, jid, data);
+      if (!owners.length && !staff.length && !mods.length) {
         return sock.sendMessage(jid, {
           text:
             `╭───〔 ⚔️ 𝐒𝐓𝐀𝐅𝐅 & 𝐌𝐎𝐃𝐒 〕───╮\n` +
@@ -194,9 +167,6 @@ export default {
         '│ ♢ 𝐎𝐖𝐍𝐄𝐑𝐒',
         ...formatRows(owners),
         '│',
-        '│ ♢ 𝐀𝐃𝐌𝐈𝐍𝐒',
-        ...formatRows(admins),
-        '│',
         '│ ♢ 𝐒𝐓𝐀𝐅𝐅',
         ...formatRows(staff),
         '│',
@@ -208,6 +178,12 @@ export default {
 
       return sock.sendMessage(jid, {
         text: caption,
+      }, { quoted: msg });
+    }
+
+    if (!isOwner) {
+      return sock.sendMessage(jid, {
+        text: "❌ Only the owner role can remove a moderator.",
       }, { quoted: msg });
     }
 
@@ -279,8 +255,6 @@ export default {
         }
         saveModsData(data);
       }
-      staffCache = null;
-      staffCacheAt = 0;
       const name = cleanName(target.name, target.phone);
       const label = name ? `${name} (+${target.phone})` : `+${target.phone}`;
 

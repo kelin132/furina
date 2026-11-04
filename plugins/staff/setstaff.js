@@ -51,7 +51,7 @@ export default {
   aliases: ["setmod", "addstaff", "grantstaff"],
   isMod: true,
 
-  async run({ sock, msg, args, sender, isOwner, isStaff, staffLevel }) {
+  async run({ sock, msg, args, sender, isOwner, isActualOwner, isStaff, staffLevel }) {
     const jid = msg.key.remoteJid;
     const targetJid = parseTarget(msg, args);
     const context = msg.message?.extendedTextMessage?.contextInfo;
@@ -77,7 +77,7 @@ export default {
       return sock.sendMessage(jid, { text: "❌ Level must be 1 (Mod), 2 (Staff), or 3 (Admin)." }, { quoted: msg });
     }
 
-    if (!isOwner && requestedLevel >= 3) {
+    if (!isActualOwner && requestedLevel >= 3) {
       return sock.sendMessage(jid, { text: "❌ Only the owner can grant Admin rank." }, { quoted: msg });
     }
     if (!isOwner && Number(staffLevel || 0) < 2) {
