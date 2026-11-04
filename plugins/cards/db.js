@@ -185,6 +185,7 @@ export async function getUserProfileSummary(sender) {
         profilePictureUrl: 1,
         profileImage: 1,
         avatarUrl: 1,
+        avatarVideo: 1,
       },
     },
   ).toArray()).filter((record) => record.userId !== "discord");
@@ -197,6 +198,7 @@ export async function getUserProfileSummary(sender) {
     profilePictureUrl: primary.profilePictureUrl,
     profileImage: primary.profileImage,
     avatarUrl: primary.avatarUrl,
+    avatarVideo: records.find((record) => /^https?:\/\//i.test(String(record.avatarVideo || "")))?.avatarVideo || null,
     cardsCount: countUniqueCards(records),
   };
 }

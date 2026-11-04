@@ -18,8 +18,23 @@ function withTimeout(promise, timeoutMs, fallback = null) {
   return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
 }
 
-async function sendProfileFallback({ sock, jid, msg, caption, profilePic, target, externalAdReply }) {
+async function sendProfileFallback({ sock, jid, msg, caption, profilePic, profileVideo, target, externalAdReply }) {
   const contextInfo = externalAdReply ? { externalAdReply } : undefined;
+  if (profileVideo) {
+    try {
+      await sock.sendMessage(
+        jid,
+        { video: { url: profileVideo }, gifPlayback: true, caption, contextInfo },
+        { quoted: msg }
+      );
+      return;
+    } catch (videoError) {
+      console.error(
+        "[profile] Animated avatar delivery failed:",
+        videoError.stack || videoError.message || videoError
+      );
+    }
+  }
   if (profilePic) {
     try {
       await sock.sendMessage(
@@ -148,6 +163,8 @@ export default {
       user,
       profilePicFromSocket: quickSocketAvatar,
     });
+    const profileVideo = [cardUser?.avatarVideo, cardUser?.avatarVideoUrl, cardUser?.profileVideoUrl]
+      .find((value) => typeof value === "string" && /^https?:\/\//i.test(value)) || null;
 
     const tag   = target.split("@")[0].split(":")[0];
     const level = user.level ?? 1;
@@ -232,10 +249,31 @@ export default {
 │  *https://aidoru.zone.id/profile*
 ╰━━━━━━━━━━━━━━━━━━━━━━╯`;
 
-    let imgBuffer;
     const externalAdReply = cmd === "profile"
       ? await buildEconomyExternalAdReply("profile")
       : null;
+    if (profileVideo) {
+      try {
+        await sock.sendMessage(
+          jid,
+          {
+            video: { url: profileVideo },
+            gifPlayback: true,
+            caption,
+            contextInfo: externalAdReply ? { externalAdReply } : undefined,
+          },
+          { quoted: msg },
+        );
+        return;
+      } catch (err) {
+        console.error(
+          "[profile] Animated avatar delivery failed:",
+          err.stack || err.message || err
+        );
+      }
+    }
+
+    let imgBuffer;
     try {
       imgBuffer = await generateProfileImage({
         username:     registeredName,
@@ -270,7 +308,7 @@ export default {
         "[profile] Canvas generation failed:",
         err.stack || err.message || err
       );
-      await sendProfileFallback({ sock, jid, msg, caption, profilePic, target, externalAdReply });
+      await sendProfileFallback({ sock, jid, msg, caption, profilePic, profileVideo, target, externalAdReply });
       return;
     }
 
@@ -289,7 +327,7 @@ export default {
         "[profile] Canvas image delivery failed:",
         err.stack || err.message || err
       );
-      await sendProfileFallback({ sock, jid, msg, caption, profilePic, target, externalAdReply });
+      await sendProfileFallback({ sock, jid, msg, caption, profilePic, profileVideo, target, externalAdReply });
     }
   },
 };
