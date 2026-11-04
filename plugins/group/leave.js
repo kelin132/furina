@@ -1,12 +1,11 @@
 export default {
   name: "leave",
   description: "Make the bot leave the current group",
-  category: "owner",
+  category: "group",
   usage: ".leave",
   aliases: ["bye", "leavegc"],
   cooldown: 5,
-  isOwner: true,
-  isStaff: true,
+  isMod: true,
 
   async run({ sock, msg }) {
     const jid = msg.key.remoteJid;

@@ -1,6 +1,6 @@
 /**
- * KELIN MD — .join / .leave
- * Owner-only commands to join a group via invite link and leave a group.
+ * KELIN MD — .join
+ * Owner-only command to join a group via invite link.
  *
  * Settings pulled from settings.cjs (botName, ownerName).
  * No external lib needed — uses Baileys sock.groupGetInviteInfo +
@@ -17,31 +17,15 @@ const PREFIX     = process.env.PREFIX || ".";
 
 export default {
   name:        "join",
-  aliases:     ["leave"],
   category:    "owner",
-  description: `Join a group via invite link (or leave current group) — prefix: ${PREFIX}`,
-  usage:       `${PREFIX}join <invite_link>  |  ${PREFIX}leave`,
+  description: `Join a group via invite link — prefix: ${PREFIX}`,
+  usage:       `${PREFIX}join <invite_link>`,
   cooldown:    5,
   isOwner:     true,
 
-  async run({ sock, msg, cmd, args }) {
+  async run({ sock, msg, args }) {
     const jid   = msg.key.remoteJid;
     const reply = (text) => sock.sendMessage(jid, { text }, { quoted: msg });
-
-    // ── .leave ───────────────────────────────────────────────────────────
-    if (cmd === "leave") {
-      if (!jid.endsWith("@g.us")) {
-        return reply("❌ This command can only be used inside a group.");
-      }
-      try {
-        await reply("👋 Leaving this group now. Goodbye!");
-        await sock.groupLeave(jid);
-      } catch (err) {
-        console.error("[join.js] Leave error:", err.message);
-        return reply(`❌ Failed to leave: ${err.message}`);
-      }
-      return;
-    }
 
     // ── .join ────────────────────────────────────────────────────────────
     const inviteLink = args[0];
