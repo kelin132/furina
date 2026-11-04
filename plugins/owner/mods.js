@@ -34,6 +34,14 @@ function commandSelector(msg) {
 
 async function buildRoster(sock, jid, data) {
   const ownerNumbers = getOwnerNumbers();
+  const botPhoneNumbers = new Set(
+    [sock.user?.id, sock.user?.jid, sock.user?.phoneNumber]
+      .map(bareNumber)
+      .filter((number) => number.length >= 7),
+  );
+  const botIdentityNumbers = new Set(
+    [...botPhoneNumbers, bareNumber(sock.user?.lid)].filter(Boolean),
+  );
   const [dbStaff, currentGroupNumbers] = await Promise.all([
     getStaffMembers(),
     jid?.endsWith("@g.us") ? getGroupNumberMap(sock, jid) : Promise.resolve(new Map()),
@@ -52,9 +60,24 @@ async function buildRoster(sock, jid, data) {
   if (stillUnresolved.length) {
     mergeNumberMaps(cleanNumMap, await getAllGroupNumberMap(sock));
   }
+  const botLid = bareNumber(sock.user?.lid);
+  if (botLid) {
+    mergeNumberMaps(cleanNumMap, await getSocketLidNumberMap(sock, [botLid]));
+    const resolvedBotPhone = bareNumber(cleanNumMap.get(botLid));
+    if (resolvedBotPhone.length >= 7) botPhoneNumbers.add(resolvedBotPhone);
+  }
 
   const byPhone = new Map();
   const ownerNumberSet = new Set(ownerNumbers);
+  const isBotIdentity = (source, phone) => {
+    const sourceNumber = bareNumber(source);
+    const displayNumber = bareNumber(phone);
+    const mappedNumber = bareNumber(cleanNumMap.get(sourceNumber));
+    return botIdentityNumbers.has(sourceNumber) ||
+      botPhoneNumbers.has(sourceNumber) ||
+      botPhoneNumbers.has(displayNumber) ||
+      botPhoneNumbers.has(mappedNumber);
+  };
   const phoneFor = (source, user) => {
     const number = bareNumber(source);
     return storedRealNumber(user) || cleanNumMap.get(number) || number;
@@ -62,7 +85,7 @@ async function buildRoster(sock, jid, data) {
 
   for (const source of ownerNumbers) {
     const phone = phoneFor(source);
-    if (!phone) continue;
+    if (!phone || isBotIdentity(source, phone)) continue;
     byPhone.set(phone, {
       phone,
       name: "",
@@ -77,7 +100,7 @@ async function buildRoster(sock, jid, data) {
   for (const user of dbStaff) {
     const source = bareNumber(user._id || user.jid || user.userId);
     const phone = phoneFor(source, user);
-    if (!phone) continue;
+    if (!phone || isBotIdentity(source, phone)) continue;
     const current = byPhone.get(phone) || {
       phone,
       name: "",
@@ -98,7 +121,7 @@ async function buildRoster(sock, jid, data) {
   for (const entry of data) {
     const source = bareNumber(entry.num);
     const phone = phoneFor(source);
-    if (!phone) continue;
+    if (!phone || isBotIdentity(source, phone)) continue;
     const current = byPhone.get(phone) || {
       phone,
       name: "",

@@ -3,6 +3,7 @@ import test from "node:test";
 import {
   matchesOwnerPhone,
   normalizeOwnerPhone,
+  normalizeOwnerNumbers,
   resolveOwnerPhone,
 } from "../lib/ownerIdentity.mjs";
 
@@ -21,6 +22,13 @@ test("Discord platform IDs cannot match a phone owner number", () => {
 
 test("phone normalization removes formatting", () => {
   assert.equal(normalizeOwnerPhone("+27 (612) 345-678"), "27612345678");
+});
+
+test("owner roster combines configured numbers and removes duplicates", () => {
+  assert.deepEqual(
+    normalizeOwnerNumbers(" +27 612 345 678,27612345679", "+27612345678", ["27612345680"]),
+    ["27612345678", "27612345679", "27612345680"],
+  );
 });
 
 test("OWNER_NUMBER takes priority over runtime and fallback settings", () => {
