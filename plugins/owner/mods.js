@@ -2,7 +2,7 @@
 // .mods  — list all guardians/mods with clean phone numbers
 // .removemod — remove a user from the mods list
 
-import { getModsData, saveModsData } from '../../lib/permissions.mjs';
+import { getModsData, getOwnerNumbers, saveModsData } from '../../lib/permissions.mjs';
 import { getStaffMembers, removeStaffLevel } from '../economy/database.js';
 import {
   bareNumber,
@@ -60,11 +60,13 @@ function commandSelector(msg) {
 }
 
 async function buildRoster(sock, jid, data) {
+  const ownerNumbers = getOwnerNumbers();
   const [dbStaff, currentGroupNumbers] = await Promise.all([
     getCachedStaffMembers(),
     jid?.endsWith("@g.us") ? getGroupNumberMap(sock, jid) : Promise.resolve(new Map()),
   ]);
   const sourceNumbers = [
+    ...ownerNumbers,
     ...dbStaff.map((user) => bareNumber(user._id || user.jid || user.userId)),
     ...data.map((entry) => bareNumber(entry.num)),
   ].filter(Boolean);
@@ -79,10 +81,25 @@ async function buildRoster(sock, jid, data) {
   }
 
   const byPhone = new Map();
+  const ownerNumberSet = new Set(ownerNumbers);
   const phoneFor = (source, user) => {
     const number = bareNumber(source);
     return storedRealNumber(user) || cleanNumMap.get(number) || number;
   };
+
+  for (const source of ownerNumbers) {
+    const phone = phoneFor(source);
+    if (!phone) continue;
+    byPhone.set(phone, {
+      phone,
+      name: "",
+      level: 99,
+      user: null,
+      modEntries: [],
+      sourceNumbers: new Set([source]),
+      isOwner: true,
+    });
+  }
 
   for (const user of dbStaff) {
     const source = bareNumber(user._id || user.jid || user.userId);
@@ -95,9 +112,11 @@ async function buildRoster(sock, jid, data) {
       user: null,
       modEntries: [],
       sourceNumbers: new Set(),
+      isOwner: false,
     };
     current.name = user.name || current.name;
-    current.level = Number(user.staffLevel) || 1;
+    current.isOwner ||= ownerNumberSet.has(source) || ownerNumberSet.has(phone);
+    current.level = current.isOwner ? 99 : Number(user.staffLevel) || 1;
     current.user = user;
     current.sourceNumbers.add(source);
     byPhone.set(phone, current);
@@ -114,8 +133,11 @@ async function buildRoster(sock, jid, data) {
       user: null,
       modEntries: [],
       sourceNumbers: new Set(),
+      isOwner: false,
     };
     current.name = current.name || entry.name || "";
+    current.isOwner ||= ownerNumberSet.has(source) || ownerNumberSet.has(phone);
+    if (current.isOwner) current.level = 99;
     current.modEntries.push(entry);
     current.sourceNumbers.add(source);
     byPhone.set(phone, current);
@@ -126,9 +148,10 @@ async function buildRoster(sock, jid, data) {
   );
   return {
     numberMap: cleanNumMap,
-    admins: sorted.filter((member) => member.level >= 3),
-    staff: sorted.filter((member) => member.level === 2),
-    mods: sorted.filter((member) => member.level <= 1),
+    owners: sorted.filter((member) => member.isOwner),
+    admins: sorted.filter((member) => !member.isOwner && member.level >= 3),
+    staff: sorted.filter((member) => !member.isOwner && member.level === 2),
+    mods: sorted.filter((member) => !member.isOwner && member.level <= 1),
   };
 }
 
@@ -146,8 +169,8 @@ export default {
     const data = getModsData();
 
     if (cmd === 'mods' || cmd === 'modlist') {
-      const { admins, staff, mods } = await buildRoster(sock, jid, data);
-      if (!admins.length && !staff.length && !mods.length) {
+      const { owners, admins, staff, mods } = await buildRoster(sock, jid, data);
+      if (!owners.length && !admins.length && !staff.length && !mods.length) {
         return sock.sendMessage(jid, {
           text:
             `╭───〔 ⚔️ 𝐒𝐓𝐀𝐅𝐅 & 𝐌𝐎𝐃𝐒 〕───╮\n` +
@@ -169,6 +192,9 @@ export default {
         '╭───〔 ⚔️ 𝐒𝐓𝐀𝐅𝐅 & 𝐌𝐎𝐃𝐒 〕───╮',
         '│',
         '│ ♢ 𝐎𝐖𝐍𝐄𝐑𝐒',
+        ...formatRows(owners),
+        '│',
+        '│ ♢ 𝐀𝐃𝐌𝐈𝐍𝐒',
         ...formatRows(admins),
         '│',
         '│ ♢ 𝐒𝐓𝐀𝐅𝐅',
