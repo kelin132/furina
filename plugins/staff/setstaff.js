@@ -1,14 +1,15 @@
 /**
  * .setstaff @user [level]
- * Set a user's staff level. Level: 1=mod, 2=staff, 3=admin
- * Owner can set any level. Staff can only set level 1 (mod).
+ * Set a user's staff level. Level: 1=mod, 2=staff, 3=owner role
+ * The configured owner and level-3 staff can grant level 3.
  * Aliases: setmod, addstaff
  */
 import { setStaffLevel } from "../economy/database.js";
 import { findUserByIdentity, whatsappIdentityVariants } from "../../lib/identity.mjs";
 import { invalidatePermissionCache } from "../../lib/permissions.mjs";
+import { canGrantStaffLevel3 } from "../../lib/ownerRoleAccess.mjs";
 
-const LEVEL_NAMES = { 1: "Mod", 2: "Staff", 3: "Admin" };
+const LEVEL_NAMES = { 1: "Mod", 2: "Staff", 3: "Owner role" };
 
 function parseTarget(msg, args) {
   const context = msg.message?.extendedTextMessage?.contextInfo;
@@ -45,7 +46,7 @@ function invalidateIdentityCache(user) {
 
 export default {
   name: "setstaff",
-  description: "Grant a user mod/staff/admin rank",
+  description: "Grant a user mod, staff, or owner-role rank",
   category: "staff",
   usage: ".setstaff @user [1|2|3]",
   aliases: ["setmod", "addstaff", "grantstaff"],
@@ -68,17 +69,19 @@ export default {
           `*Levels:*\n` +
           `• \`1\` — Mod (can use staff commands)\n` +
           `• \`2\` — Staff (higher access)\n` +
-          `• \`3\` — Admin (owner-level staff)\n\n` +
+          `• \`3\` — Owner role (owner-level staff access)\n\n` +
           `_Example: \`.setstaff @user 2\`_`
       }, { quoted: msg });
     }
 
     if (![1, 2, 3].includes(requestedLevel)) {
-      return sock.sendMessage(jid, { text: "❌ Level must be 1 (Mod), 2 (Staff), or 3 (Admin)." }, { quoted: msg });
+      return sock.sendMessage(jid, { text: "❌ Level must be 1 (Mod), 2 (Staff), or 3 (Owner role)." }, { quoted: msg });
     }
 
-    if (!isActualOwner && requestedLevel >= 3) {
-      return sock.sendMessage(jid, { text: "❌ Only the owner can grant Admin rank." }, { quoted: msg });
+    if (requestedLevel >= 3 && !canGrantStaffLevel3(isActualOwner, staffLevel)) {
+      return sock.sendMessage(jid, {
+        text: "❌ Only the configured owner or staff level 3 can grant the Owner role.",
+      }, { quoted: msg });
     }
     if (!isOwner && Number(staffLevel || 0) < 2) {
       return sock.sendMessage(jid, {

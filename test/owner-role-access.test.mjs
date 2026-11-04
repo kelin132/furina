@@ -1,10 +1,21 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { canRunOwnerCommand, hasOwnerRole } from "../lib/ownerRoleAccess.mjs";
+import {
+  canGrantStaffLevel3,
+  canRunOwnerCommand,
+  hasOwnerRole,
+} from "../lib/ownerRoleAccess.mjs";
 
 test("staff level 3 has the owner role, but level 2 does not", () => {
   assert.equal(hasOwnerRole(false, 3), true);
   assert.equal(hasOwnerRole(false, 2), false);
+});
+
+test("only the configured owner and level-3 staff can grant level 3", () => {
+  assert.equal(canGrantStaffLevel3(true, 0), true);
+  assert.equal(canGrantStaffLevel3(false, 3), true);
+  assert.equal(canGrantStaffLevel3(false, 2), false);
+  assert.equal(canGrantStaffLevel3(false, 1), false);
 });
 
 test("owner commands allow level 3 and the configured bot owner", () => {
