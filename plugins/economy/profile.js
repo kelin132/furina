@@ -1,5 +1,6 @@
 import { getQuickProfileUser, getUser, requireRegistration } from "./database.js";
 import { generateProfileImage, getProfilePic, resolveRole } from "../../lib/profileGen.mjs";
+import { generateAnimatedProfileCard } from "../../lib/profileAnimation.mjs";
 import { getLevelRole, getAllEarnedRoles, getLevelRoleLabel } from "../../lib/levelRoles.mjs";
 import { getUserProfileSummary } from "../cards/db.js";
 import { countTrainerPokemon } from "../../lib/pokemon/pokemonDb.mjs";
@@ -7,29 +8,8 @@ import { guildSystem } from "../../lib/guildSystem.js";
 import { GYMS } from "../../lib/pokemon/gymData.mjs";
 import { getTrainer } from "../../lib/pokemon/players.mjs";
 import { buildEconomyExternalAdReply } from "../../lib/economyPreview.mjs";
-import { convertGifToMp4 } from "../anime/_helper.js";
 
 const xpForLevel = (level) => level * 100;
-const PROFILE_GIF_MAX_BYTES = 10 * 1024 * 1024;
-
-async function profileAnimationContent(profileVideo) {
-  const url = new URL(profileVideo);
-  if (url.searchParams.get("format") !== "gif") {
-    return { video: { url: profileVideo }, gifPlayback: true };
-  }
-
-  const response = await fetch(profileVideo, { signal: AbortSignal.timeout(20_000) });
-  if (!response.ok) throw new Error(`Profile GIF request failed (${response.status}).`);
-  const declaredLength = Number(response.headers.get("content-length")) || 0;
-  if (declaredLength > PROFILE_GIF_MAX_BYTES) throw new Error("Profile GIF exceeds the 10 MB limit.");
-  const gif = Buffer.from(await response.arrayBuffer());
-  if (gif.length > PROFILE_GIF_MAX_BYTES) throw new Error("Profile GIF exceeds the 10 MB limit.");
-  const signature = gif.subarray(0, 6).toString("ascii");
-  if (signature !== "GIF87a" && signature !== "GIF89a") {
-    throw new Error("The profile animation URL did not return a GIF.");
-  }
-  return { video: await convertGifToMp4(gif, "profile-avatar"), gifPlayback: true };
-}
 
 function withTimeout(promise, timeoutMs, fallback = null) {
   let timer;
@@ -39,6 +19,13 @@ function withTimeout(promise, timeoutMs, fallback = null) {
   return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
 }
 
+function isSupportedProfileImage(value) {
+  return typeof value === "string" && (
+    /^https?:\/\//i.test(value) ||
+    /^data:image\/(?:png|jpe?g|webp|gif);base64,[A-Za-z0-9+/]+={0,2}$/i.test(value)
+  );
+}
+
 function profileImagePayload(profilePic) {
   const dataUrl = /^data:image\/(?:png|jpe?g|webp|gif);base64,([A-Za-z0-9+/]+={0,2})$/i.exec(
     String(profilePic || ""),
@@ -46,23 +33,8 @@ function profileImagePayload(profilePic) {
   return dataUrl ? Buffer.from(dataUrl[1], "base64") : { url: profilePic };
 }
 
-async function sendProfileFallback({ sock, jid, msg, caption, profilePic, profileVideo, target, externalAdReply }) {
+async function sendProfileFallback({ sock, jid, msg, caption, profilePic, target, externalAdReply }) {
   const contextInfo = externalAdReply ? { externalAdReply } : undefined;
-  if (profileVideo) {
-    try {
-      await sock.sendMessage(
-        jid,
-        { ...(await profileAnimationContent(profileVideo)), caption, contextInfo },
-        { quoted: msg }
-      );
-      return;
-    } catch (videoError) {
-      console.error(
-        "[profile] Animated avatar delivery failed:",
-        videoError.stack || videoError.message || videoError
-      );
-    }
-  }
   if (profilePic) {
     try {
       await sock.sendMessage(
@@ -176,27 +148,29 @@ export default {
     // Both profile commands use a compact card snapshot so website media and
     // card counts stay current without loading the full card collection.
     const cardUserPromise = getUserProfileSummary(target);
-    const profilePicPromise = isQuickProfile
-      ? getProfilePic(sock, target).catch(() => null)
-      : withTimeout(getProfilePic(sock, target), 2500);
+    const profilePicPromise = cardUserPromise.then((cardUser) => {
+      const savedAvatar = [
+        cardUser?.profilePictureUrl,
+        cardUser?.profileImage,
+        cardUser?.avatarUrl,
+      ].some(isSupportedProfileImage);
+      return savedAvatar
+        ? null
+        : withTimeout(getProfilePic(sock, target), 1000);
+    });
     const [cardUser, user, profilePicFromSocket, pokemonCount, guild, trainer] = await Promise.all([
       cardUserPromise,
       isQuickProfile ? getQuickProfileUser(target) : getUser(target),
-      isQuickProfile ? Promise.resolve(null) : profilePicPromise,
+      profilePicPromise,
       countTrainerPokemon(target),
       isQuickProfile ? Promise.resolve(null) : withTimeout(guildSystem.getUserPrimaryGuild(target), 2500),
       isQuickProfile ? withTimeout(getTrainer(target), 1500) : withTimeout(getTrainer(target), 2500),
     ]);
     if (target === sender && isQuickProfile && !await requireRegistration(sock, msg, sender, user)) return;
-    const savedAvatar = [cardUser?.profilePictureUrl, cardUser?.profileImage, cardUser?.avatarUrl]
-      .find((value) => typeof value === "string" && /^https?:\/\//i.test(value));
-    const quickSocketAvatar = isQuickProfile && !savedAvatar
-      ? await withTimeout(profilePicPromise, 1500)
-      : profilePicFromSocket;
     const { profilePic, profileBackground } = resolveProfileImageSources({
       cardUser,
       user,
-      profilePicFromSocket: quickSocketAvatar,
+      profilePicFromSocket,
     });
     const profileVideo = [cardUser?.avatarVideo, cardUser?.avatarVideoUrl, cardUser?.profileVideoUrl]
       .find((value) => typeof value === "string" && /^https?:\/\//i.test(value)) || null;
@@ -288,12 +262,43 @@ export default {
     const externalAdReply = cmd === "profile"
       ? await buildEconomyExternalAdReply("profile")
       : null;
+    const profileCardData = {
+      username:     registeredName,
+      tag,
+      role,
+      level,
+      xp,
+      xpTarget:     xpForLevel(level),
+      reach,
+      wallet:       user.money    ?? 0,
+      bank:         user.bank     ?? 0,
+      bio:          user.bio      || "No bio set.",
+      guild:        guildName,
+      joined:       joinedDate,
+      streak,
+      items:        user.inventory?.length ?? 0,
+      transactions: user.history?.length   ?? 0,
+      profileImage: profilePic,
+      profileBackground,
+      profileFrame,
+      levelRole,
+      earnedRoles,
+      daysActive,
+      cards: cardsOwned,
+      games: gamesPlayed,
+      pokemon: pokemonCount,
+      diamonds: user.diamonds ?? 0,
+    };
+
     if (profileVideo) {
       try {
+        const video = await generateAnimatedProfileCard(profileCardData, profileVideo);
         await sock.sendMessage(
           jid,
           {
-            ...(await profileAnimationContent(profileVideo)),
+            video,
+            mimetype: "video/mp4",
+            gifPlayback: true,
             caption,
             contextInfo: externalAdReply ? { externalAdReply } : undefined,
           },
@@ -302,7 +307,7 @@ export default {
         return;
       } catch (err) {
         console.error(
-          "[profile] Animated avatar delivery failed:",
+          "[profile] Animated profile-card rendering failed; sending the standard profile card:",
           err.stack || err.message || err
         );
       }
@@ -310,40 +315,14 @@ export default {
 
     let imgBuffer;
     try {
-      imgBuffer = await generateProfileImage({
-        username:     registeredName,
-        tag,
-        role,
-        level,
-        xp,
-        xpTarget:     xpForLevel(level),
-        reach,
-        wallet:       user.money    ?? 0,
-        bank:         user.bank     ?? 0,
-        bio:          user.bio      || "No bio set.",
-        guild:        guildName,
-        joined:       joinedDate,
-        streak,
-        items:        user.inventory?.length ?? 0,
-        transactions: user.history?.length   ?? 0,
-        profileImage: profilePic,
-        profileBackground,
-        profileFrame,
-        levelRole,
-        earnedRoles,
-        daysActive,
-        cards: cardsOwned,
-        games: gamesPlayed,
-        pokemon: pokemonCount,
-        diamonds: user.diamonds ?? 0,
-      });
+      imgBuffer = await generateProfileImage(profileCardData);
 
     } catch (err) {
       console.error(
         "[profile] Canvas generation failed:",
         err.stack || err.message || err
       );
-      await sendProfileFallback({ sock, jid, msg, caption, profilePic, profileVideo, target, externalAdReply });
+      await sendProfileFallback({ sock, jid, msg, caption, profilePic, target, externalAdReply });
       return;
     }
 
@@ -362,7 +341,7 @@ export default {
         "[profile] Canvas image delivery failed:",
         err.stack || err.message || err
       );
-      await sendProfileFallback({ sock, jid, msg, caption, profilePic, profileVideo, target, externalAdReply });
+      await sendProfileFallback({ sock, jid, msg, caption, profilePic, target, externalAdReply });
     }
   },
 };
