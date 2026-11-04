@@ -7,8 +7,29 @@ import { guildSystem } from "../../lib/guildSystem.js";
 import { GYMS } from "../../lib/pokemon/gymData.mjs";
 import { getTrainer } from "../../lib/pokemon/players.mjs";
 import { buildEconomyExternalAdReply } from "../../lib/economyPreview.mjs";
+import { convertGifToMp4 } from "../anime/_helper.js";
 
 const xpForLevel = (level) => level * 100;
+const PROFILE_GIF_MAX_BYTES = 10 * 1024 * 1024;
+
+async function profileAnimationContent(profileVideo) {
+  const url = new URL(profileVideo);
+  if (url.searchParams.get("format") !== "gif") {
+    return { video: { url: profileVideo }, gifPlayback: true };
+  }
+
+  const response = await fetch(profileVideo, { signal: AbortSignal.timeout(20_000) });
+  if (!response.ok) throw new Error(`Profile GIF request failed (${response.status}).`);
+  const declaredLength = Number(response.headers.get("content-length")) || 0;
+  if (declaredLength > PROFILE_GIF_MAX_BYTES) throw new Error("Profile GIF exceeds the 10 MB limit.");
+  const gif = Buffer.from(await response.arrayBuffer());
+  if (gif.length > PROFILE_GIF_MAX_BYTES) throw new Error("Profile GIF exceeds the 10 MB limit.");
+  const signature = gif.subarray(0, 6).toString("ascii");
+  if (signature !== "GIF87a" && signature !== "GIF89a") {
+    throw new Error("The profile animation URL did not return a GIF.");
+  }
+  return { video: await convertGifToMp4(gif, "profile-avatar"), gifPlayback: true };
+}
 
 function withTimeout(promise, timeoutMs, fallback = null) {
   let timer;
@@ -24,7 +45,7 @@ async function sendProfileFallback({ sock, jid, msg, caption, profilePic, profil
     try {
       await sock.sendMessage(
         jid,
-        { video: { url: profileVideo }, gifPlayback: true, caption, contextInfo },
+        { ...(await profileAnimationContent(profileVideo)), caption, contextInfo },
         { quoted: msg }
       );
       return;
@@ -257,8 +278,7 @@ export default {
         await sock.sendMessage(
           jid,
           {
-            video: { url: profileVideo },
-            gifPlayback: true,
+            ...(await profileAnimationContent(profileVideo)),
             caption,
             contextInfo: externalAdReply ? { externalAdReply } : undefined,
           },
