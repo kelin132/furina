@@ -166,8 +166,8 @@ export async function getUser(sender) {
 }
 
 /**
- * Lightweight read for `.p`: count owned cards and read the selected avatar
- * without cloning pending cards or returning the full collection document.
+ * Lightweight read for profile cards: count owned cards and read the latest
+ * website appearance without returning the full collection document.
  */
 export async function getUserProfileSummary(sender) {
   const col = await Col.users();
@@ -186,6 +186,9 @@ export async function getUserProfileSummary(sender) {
         profileImage: 1,
         avatarUrl: 1,
         avatarVideo: 1,
+        profileBackground: 1,
+        profileFrame: 1,
+        websiteProfileUpdatedAt: 1,
       },
     },
   ).toArray()).filter((record) => record.userId !== "discord");
@@ -194,11 +197,24 @@ export async function getUserProfileSummary(sender) {
   records.sort((a, b) => (b.cards?.length || 0) - (a.cards?.length || 0) ||
     String(a._id).localeCompare(String(b._id)));
   const primary = records[0];
+  const websiteProfile = records
+    .filter((record) => record.websiteProfileUpdatedAt)
+    .sort((a, b) =>
+      new Date(b.websiteProfileUpdatedAt).getTime() - new Date(a.websiteProfileUpdatedAt).getTime(),
+    )[0] || primary;
+  const avatarVideo = websiteProfile.websiteProfileUpdatedAt
+    ? (/^https?:\/\//i.test(String(websiteProfile.avatarVideo || "")) ? websiteProfile.avatarVideo : null)
+    : records.find((record) => /^https?:\/\//i.test(String(record.avatarVideo || "")))?.avatarVideo || null;
   return {
-    profilePictureUrl: primary.profilePictureUrl,
-    profileImage: primary.profileImage,
-    avatarUrl: primary.avatarUrl,
-    avatarVideo: records.find((record) => /^https?:\/\//i.test(String(record.avatarVideo || "")))?.avatarVideo || null,
+    profilePictureUrl: websiteProfile.websiteProfileUpdatedAt
+      ? websiteProfile.profilePictureUrl ?? null
+      : websiteProfile.profilePictureUrl ?? websiteProfile.profileImage ?? websiteProfile.avatarUrl ?? null,
+    profileImage: websiteProfile.profileImage ?? null,
+    avatarUrl: websiteProfile.avatarUrl ?? null,
+    avatarVideo,
+    profileBackground: websiteProfile.profileBackground ?? null,
+    profileFrame: websiteProfile.profileFrame ?? null,
+    websiteProfileUpdatedAt: websiteProfile.websiteProfileUpdatedAt ?? null,
     cardsCount: countUniqueCards(records),
   };
 }

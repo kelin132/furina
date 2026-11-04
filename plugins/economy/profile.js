@@ -1,7 +1,7 @@
 import { getQuickProfileUser, getUser, requireRegistration } from "./database.js";
 import { generateProfileImage, getProfilePic, resolveRole } from "../../lib/profileGen.mjs";
 import { getLevelRole, getAllEarnedRoles, getLevelRoleLabel } from "../../lib/levelRoles.mjs";
-import { getUser as getCardUser, getUserProfileSummary } from "../cards/db.js";
+import { getUserProfileSummary } from "../cards/db.js";
 import { countTrainerPokemon } from "../../lib/pokemon/pokemonDb.mjs";
 import { guildSystem } from "../../lib/guildSystem.js";
 import { GYMS } from "../../lib/pokemon/gymData.mjs";
@@ -39,6 +39,13 @@ function withTimeout(promise, timeoutMs, fallback = null) {
   return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
 }
 
+function profileImagePayload(profilePic) {
+  const dataUrl = /^data:image\/(?:png|jpe?g|webp|gif);base64,([A-Za-z0-9+/]+={0,2})$/i.exec(
+    String(profilePic || ""),
+  );
+  return dataUrl ? Buffer.from(dataUrl[1], "base64") : { url: profilePic };
+}
+
 async function sendProfileFallback({ sock, jid, msg, caption, profilePic, profileVideo, target, externalAdReply }) {
   const contextInfo = externalAdReply ? { externalAdReply } : undefined;
   if (profileVideo) {
@@ -60,7 +67,7 @@ async function sendProfileFallback({ sock, jid, msg, caption, profilePic, profil
     try {
       await sock.sendMessage(
         jid,
-        { image: { url: profilePic }, caption, contextInfo },
+        { image: profileImagePayload(profilePic), caption, contextInfo },
         { quoted: msg }
       );
       return;
@@ -128,11 +135,18 @@ https://aidoru.zone.id/profile
 }
 
 export function resolveProfileImageSources({ cardUser, user, profilePicFromSocket }) {
-  const savedAvatar = [cardUser?.profilePictureUrl, cardUser?.profileImage, cardUser?.avatarUrl]
-    .find((value) => typeof value === "string" && /^https?:\/\//i.test(value));
+  const isSupportedImage = (value) =>
+    typeof value === "string" &&
+    (/^https?:\/\//i.test(value) ||
+      /^data:image\/(?:png|jpe?g|webp|gif);base64,[A-Za-z0-9+/]+={0,2}$/i.test(value));
+  const savedAvatar = cardUser?.websiteProfileUpdatedAt
+    ? (isSupportedImage(cardUser.profilePictureUrl) ? cardUser.profilePictureUrl : null)
+    : [cardUser?.profilePictureUrl, cardUser?.profileImage, cardUser?.avatarUrl].find(isSupportedImage);
   return {
     profilePic: savedAvatar || profilePicFromSocket || null,
-    profileBackground: user?.profileBackground || null,
+    profileBackground: cardUser?.websiteProfileUpdatedAt
+      ? cardUser.profileBackground || null
+      : cardUser?.profileBackground || user?.profileBackground || null,
   };
 }
 
@@ -159,9 +173,9 @@ export default {
     const isQuickProfile = cmd === "p";
     if (target === sender && !isQuickProfile && !await requireRegistration(sock, msg, sender)) return;
 
-    // `.p` uses narrow, read-only snapshots and starts all independent reads
-    // together. The full profile keeps its richer card/trainer/guild data.
-    const cardUserPromise = isQuickProfile ? getUserProfileSummary(target) : getCardUser(target);
+    // Both profile commands use a compact card snapshot so website media and
+    // card counts stay current without loading the full card collection.
+    const cardUserPromise = getUserProfileSummary(target);
     const profilePicPromise = isQuickProfile
       ? getProfilePic(sock, target).catch(() => null)
       : withTimeout(getProfilePic(sock, target), 2500);
@@ -191,9 +205,10 @@ export default {
     const level = user.level ?? 1;
     const xp    = user.xp    ?? 0;
     const registeredName = String(user.name || "User").trim() || "User";
-    const cardsOwned = Array.isArray(cardUser?.cards)
-      ? cardUser.cards.length
-      : (cardUser?.cardsCount ?? cardUser?.totalCards ?? 0);
+    const cardsOwned = cardUser?.cardsCount ?? 0;
+    const profileFrame = cardUser?.websiteProfileUpdatedAt
+      ? cardUser.profileFrame ?? "none"
+      : user.profileFrame ?? cardUser?.profileFrame ?? null;
     const history = Array.isArray(user.history) ? user.history : [];
     const gameTypes = new Set(["bet", "coinflip", "slots", "roulette", "scratch", "gamble"]);
     const casinoTypes = new Set(["slots", "roulette", "scratch", "gamble"]);
@@ -313,7 +328,7 @@ export default {
         transactions: user.history?.length   ?? 0,
         profileImage: profilePic,
         profileBackground,
-        profileFrame: user.profileFrame || null,
+        profileFrame,
         levelRole,
         earnedRoles,
         daysActive,
