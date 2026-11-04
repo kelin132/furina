@@ -5,6 +5,7 @@
 import {
   getAuction, placeBid, timeLeft, withAuctionLock, withBidderLock,
 } from "../../lib/auctionManager.mjs";
+import { formatCardLabel } from "../../lib/cardApi.mjs";
 import {
   activeAuctionHoldAmount,
   AUCTION_HOLD_RECOVERY_GRACE_MS,
@@ -45,7 +46,7 @@ export default {
       const secs = timeLeft(groupJid);
       return reply(
         `🔨 *ACTIVE AUCTION*\n\n` +
-        `🃏 *${auction.card.name}* [${auction.card.tier}]\n` +
+        `${formatCardLabel(auction.card)}\n` +
         `💰 Current bid : ${auction.currentBid > 0 ? `$${auction.currentBid.toLocaleString()}` : "No bids yet"}\n` +
         `💰 Minimum     : $${Math.max(auction.startBid, auction.currentBid + 1).toLocaleString()}\n` +
         `⏱️ Time left    : ${secs}s\n\n` +
@@ -132,7 +133,7 @@ export default {
       text: [
         `💰 *NEW HIGHEST BID!*`,
         ``,
-        `🃏 *${auction.card.name}* [${auction.card.tier}]`,
+        `${formatCardLabel(auction.card)}`,
         ``,
         `🏆 Leader  : @${bidderNum}`,
         `💰 Bid     : $${amount.toLocaleString()}`,

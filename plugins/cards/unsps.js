@@ -1,4 +1,4 @@
-import { getTierCounts, TIER_EMOJI, TIER_NAME } from "../../lib/cardApi.mjs";
+import { getTierCounts, TIER_NAME } from "../../lib/cardApi.mjs";
 
 export default {
   name: "unsps",
@@ -21,8 +21,7 @@ export default {
 
       let text = `🎴 *CARD POOL STATS*\n\n`;
       for (const tier of tiers) {
-        const emoji = TIER_EMOJI[tier] || "⭐";
-        text += `${emoji} *${tier}:* ${(counts[tier] || 0).toLocaleString()}\n`;
+        text += `*${tier}:* ${(counts[tier] || 0).toLocaleString()}\n`;
       }
       text += `\n📦 *Total cards in pool:* ${total.toLocaleString()}`;
 

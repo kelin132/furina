@@ -1,4 +1,5 @@
 import { findOrCreateUser } from "./db.js";
+import { formatCardLabel } from "../../lib/cardApi.mjs";
 
 function resolveTarget(msg) {
   const ctx = msg.message?.extendedTextMessage?.contextInfo
@@ -58,8 +59,7 @@ export default {
         text:
 `🎁 *CARD GIFTED*
 
-🃏 ${card.name || "Unknown Card"}
-⭐ ${card.tier || "Unknown"}
+${formatCardLabel(card)}
 
 📤 From: @${sender.split("@")[0]}
 📥 To: @${target.split("@")[0]}`,

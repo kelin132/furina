@@ -13,19 +13,19 @@ export default {
 
 ━━━━━━━━━━━━━━━
 
-⚪ *1 Common*      · weight 38
-🟢 *2 Uncommon*    · weight 24
-🔵 *3 Rare*        · weight 17
-🟣 *4 Epic*        · weight 10
-🟡 *5 Legendary*   · weight 6
-🔴 *6 Mythical*    · weight 4
-🌟 *S Secret*      · weight 1
-💠 *C*             · weight 0.5
-🔷 *R*             · weight 0.3
-🟣 *SR*            · weight 0.15
-💎 *SSR*           · weight 0.05
-🌠 *UR*            · weight 0.02
-✨ *X*             · weight 0.01
+*1 Common*      · weight 38
+*2 Uncommon*    · weight 24
+*3 Rare*        · weight 17
+*4 Epic*        · weight 10
+*5 Legendary*   · weight 6
+*6 Mythical*    · weight 4
+*S Secret*      · weight 1
+*C*             · weight 0.5
+*R*             · weight 0.3
+*SR*            · weight 0.15
+*SSR*           · weight 0.05
+*UR*            · weight 0.02
+*X*             · weight 0.01
 
 Weights are relative; higher tiers are much less likely.
 

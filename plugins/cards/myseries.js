@@ -5,7 +5,7 @@
  * .ci <card name>     — show card details
  */
 import { findOrCreateUser } from "./db.js";
-import { TIER_EMOJI, TIER_NAME } from "../../lib/cardApi.mjs";
+import { formatCardLabel, TIER_NAME } from "../../lib/cardApi.mjs";
 
 const TIER_ORDER = [...Object.values(TIER_NAME)].reverse();
 
@@ -63,7 +63,7 @@ export default {
         out    += `@${sender.split("@")[0]} — ${cards.length} card${cards.length !== 1 ? "s" : ""}\n\n`;
 
         cards.forEach((card, i) => {
-          out += `${i + 1}. ${TIER_EMOJI[card.tier] || "⭐"} *${card.name}* (${card.tier})\n`;
+          out += `${i + 1}. ${formatCardLabel(card)}\n`;
         });
 
         out += `\n\n💡 Use *.ci <card name or index>* for card details.`;
@@ -93,7 +93,7 @@ export default {
         // Build tier breakdown (best tiers first, skip zeros)
         const breakdown = TIER_ORDER
           .filter((t) => tierCounts[t])
-          .map((t) => `${TIER_EMOJI[t]}×${tierCounts[t]}`)
+          .map((t) => `${t}×${tierCounts[t]}`)
           .join(" ");
 
         out += `*${series}*\n`;

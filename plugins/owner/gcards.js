@@ -1,4 +1,4 @@
-import { createSpawnId, fetchAllCards, TIER_NAME, TIER_NUM } from "../../lib/cardApi.mjs";
+import { createSpawnId, fetchAllCards, TIER_NAME, TIER_NUM, formatCardLabel } from "../../lib/cardApi.mjs";
 import { findOrCreateUser, uid } from "../cards/db.js";
 
 const MAX_BULK_CARDS = 100;
@@ -59,7 +59,7 @@ function seriesRequest(input) {
 }
 
 function cardLabel(card) {
-  return `${card.name} (${card.tier}, ${card.cardId})`;
+  return `${formatCardLabel(card)} · ${card.cardId}`;
 }
 
 function resolveCard(allCards, input) {
@@ -173,7 +173,7 @@ export default {
       user.totalCards = (user.totalCards || 0) + grantedCards.length;
       await user.save();
 
-      const preview = grantedCards.slice(0, 20).map((card) => `• ${card.name} — ${card.tier}`).join("\n");
+      const preview = grantedCards.slice(0, 20).map((card) => `• ${formatCardLabel(card)}`).join("\n");
       const remaining = grantedCards.length - Math.min(grantedCards.length, 20);
       const missingText = missing.length ? `\n\n⚠️ Not found: ${missing.join(", ")}` : "";
       const remainingText = remaining > 0 ? `\n• ...and ${remaining} more` : "";

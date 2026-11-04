@@ -1,5 +1,5 @@
 import { findOrCreateUser } from "./db.js";
-import { TIER_EMOJI } from "../../lib/cardApi.mjs";
+import { formatCardLabel } from "../../lib/cardApi.mjs";
 
 export default {
   name: "col",
@@ -31,10 +31,9 @@ export default {
       const start = (page - 1) * limit;
       const slice = user.cards.slice(start, start + limit);
 
-      let cardLines = slice.map((card, i) => {
-        const emoji = TIER_EMOJI[card.tier] || "⭐";
-        return `│  \`${start + i + 1}.\` ${emoji} \`${card.name}\``;
-      }).join("\n");
+      let cardLines = slice
+        .map((card, i) => `│  \`${start + i + 1}.\` ${formatCardLabel(card)}`)
+        .join("\n");
 
       let text =
 `╭─❀「 🃏 *𝐂𝐎𝐋𝐋𝐄𝐂𝐓𝐈𝐎𝐍* 」❀─╮

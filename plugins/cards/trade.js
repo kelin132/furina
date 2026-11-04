@@ -8,7 +8,7 @@
  * Trades expire after 5 minutes.
  */
 import { findOrCreateUser } from "./db.js";
-import { TIER_EMOJI } from "../../lib/cardApi.mjs";
+import { formatCardLabel } from "../../lib/cardApi.mjs";
 
 const EXPIRE_MS = 5 * 60 * 1000; // 5 minutes
 
@@ -24,7 +24,7 @@ function resolveTarget(msg) {
 }
 
 function cardLine(card) {
-  return `${TIER_EMOJI[card.tier] || "⭐"} *${card.name}* (${card.tier})`;
+  return formatCardLabel(card);
 }
 
 // Clean up expired trades periodically

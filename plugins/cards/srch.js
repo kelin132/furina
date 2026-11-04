@@ -1,4 +1,4 @@
-import { getCard, searchCards, TIER_EMOJI, sendCardMedia } from "../../lib/cardApi.mjs";
+import { getCard, searchCards, formatCardLabel, sendCardMedia } from "../../lib/cardApi.mjs";
 
 export default {
   name: "search",
@@ -27,14 +27,12 @@ export default {
         return reply(`❌ No card found matching "${query}".`);
       }
 
-      const emoji = TIER_EMOJI[card.tier] || "⭐";
       const text =
 `ㅤㅤ∘]───❀───[∘
 *∘₊✧ CARD INFO* ❀
      ∘]───❀───[∘
 
-𝗡𝗮𝗺𝗲: ${card.name}
-𝗧𝗶𝗲𝗿: ${emoji} ${card.tier}
+𝗖𝗮𝗿𝗱: ${formatCardLabel(card)}
 𝗣𝗿𝗶𝗰𝗲: $${card.price.toLocaleString()}
 𝗜𝗗: ${card.claimId || card.index}
 𝗦𝗲𝗿𝗶𝗲𝘀: ${card.series}

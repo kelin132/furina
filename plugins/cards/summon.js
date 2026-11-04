@@ -15,7 +15,7 @@ import { persistChargedSummon } from "../../lib/summonPersistence.mjs";
 import {
   fetchCardByTier,
   sendCardMedia,
-  TIER_EMOJI,
+  formatCardLabel,
   createSpawnId,
   resolveSummonTier,
 } from "../../lib/cardApi.mjs";
@@ -90,19 +90,19 @@ export default {
 ┣━━━━━━━━━━━━━━━━━━━━━━━━
 ┃ 💰 𝗦𝘂𝗺𝗺𝗼𝗻 𝗖𝗼𝘀𝘁𝘀
 ┃
-┃ ⚪ T1 Common     › \`$${SUMMON_COST.Common.toLocaleString()}\`
-┃ 🟢 T2 Uncommon   › \`$${SUMMON_COST.Uncommon.toLocaleString()}\`
-┃ 🔵 T3 Rare       › \`$${SUMMON_COST.Rare.toLocaleString()}\`
-┃ 🟣 T4 Epic       › \`$${SUMMON_COST.Epic.toLocaleString()}\`
-┃ 🟡 T5 Legendary  › \`$${SUMMON_COST.Legendary.toLocaleString()}\`
-┃ 🔴 T6 Mythical   › \`$${SUMMON_COST.Mythical.toLocaleString()}\`
-┃ 🌌 TS Secret     › \`$${SUMMON_COST.Secret.toLocaleString()}\`
-┃ 💠 C              › \`$${SUMMON_COST.C.toLocaleString()}\`
-┃ 🔷 R              › \`$${SUMMON_COST.R.toLocaleString()}\`
-┃ 🟣 SR             › \`$${SUMMON_COST.SR.toLocaleString()}\`
-┃ 💎 SSR            › \`$${SUMMON_COST.SSR.toLocaleString()}\`
-┃ 🌠 UR             › \`$${SUMMON_COST.UR.toLocaleString()}\`
-┃ ✨ X              › \`$${SUMMON_COST.X.toLocaleString()}\`
+┃ T1 Common     › \`$${SUMMON_COST.Common.toLocaleString()}\`
+┃ T2 Uncommon   › \`$${SUMMON_COST.Uncommon.toLocaleString()}\`
+┃ T3 Rare       › \`$${SUMMON_COST.Rare.toLocaleString()}\`
+┃ T4 Epic       › \`$${SUMMON_COST.Epic.toLocaleString()}\`
+┃ T5 Legendary  › \`$${SUMMON_COST.Legendary.toLocaleString()}\`
+┃ T6 Mythical   › \`$${SUMMON_COST.Mythical.toLocaleString()}\`
+┃ TS Secret     › \`$${SUMMON_COST.Secret.toLocaleString()}\`
+┃ C              › \`$${SUMMON_COST.C.toLocaleString()}\`
+┃ R              › \`$${SUMMON_COST.R.toLocaleString()}\`
+┃ SR             › \`$${SUMMON_COST.SR.toLocaleString()}\`
+┃ SSR            › \`$${SUMMON_COST.SSR.toLocaleString()}\`
+┃ UR             › \`$${SUMMON_COST.UR.toLocaleString()}\`
+┃ X              › \`$${SUMMON_COST.X.toLocaleString()}\`
 ┃
 ┣━━━━━━━━━━━━━━━━━━━━━━━━
 ┃ 📖 𝗨𝘀𝗮𝗴𝗲
@@ -162,7 +162,6 @@ export default {
 
       // Strict cost lookup
       const cost = SUMMON_COST[tierName] ?? SUMMON_COST.Common;
-      const emoji = TIER_EMOJI[tierName] || (tierName === "Secret" ? "🌌" : "⭐");
 
       // ── Require economy registration ────────────────────────────────────────
       if (!await requireRegistration(sock, msg, sender)) return;
@@ -237,11 +236,10 @@ export default {
       await addHistory(sender, "summon", -cost, `Summoned ${tierName} card`).catch(() => {});
 
       const claimText =
-`╭━━━〔 ${emoji} 𝑺𝑼𝑴𝑴𝑶𝑵 𝑺𝒀𝑺𝑻𝑬𝑴 ✨ 〕━━━╮
+`╭━━━〔 🃏 𝑺𝑼𝑴𝑴𝑶𝑵 𝑺𝒀𝑺𝑻𝑬𝑴 ✨ 〕━━━╮
 ┃ ✦ A card has appeared from the ether...
 ┃${isRandom ? `\n┃ 🎲 Roll  ➜ 『 \`${tierName} Tier\` 』` : ""}
-┃ 🃏 Card  ➜ 『 \`${card.name}\` 』
-┃ ${emoji} Tier  ➜ 『 \`${card.tier}\` 』
+┃ ${formatCardLabel(card)}
 ┃ 📺 Series ➜ 『 \`${card.series}\` 』
 ┃ 🔢 Claim # ➜ 『 \`${pendingCard.claimId}\` 』
 ┃

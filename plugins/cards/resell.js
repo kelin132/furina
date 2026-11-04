@@ -4,7 +4,7 @@
  * Payout lands in the user's economy wallet.
  */
 import { findOrCreateUser } from "./db.js";
-import { TIER_EMOJI } from "../../lib/cardApi.mjs";
+import { formatCardLabel } from "../../lib/cardApi.mjs";
 import {
   getUser    as getEconomyUser,
   saveUser   as saveEconomyUser,
@@ -102,7 +102,6 @@ Example: \`.resell 3\``
       const card      = cardUser.cards[index];
       const cardName  = card.name  || "Unknown Card";
       const cardTier  = card.tier  || "Common";
-      const cardEmoji = TIER_EMOJI[cardTier] || "⭐";
       const baseValue = card.price || RESELL_BASE[cardTier] || 200;
       const payout    = Math.floor(baseValue * PAYOUT_RATE);
 
@@ -126,8 +125,7 @@ Example: \`.resell 3\``
       return reply(
 `✅ *CARD SOLD!*
 
-🃏 *${cardName}*
-${cardEmoji} Tier: ${cardTier}
+${formatCardLabel(card)}
 💰 Market Value: $${baseValue.toLocaleString()}
 
 💰 You received: *$${payout.toLocaleString()}* (50%)

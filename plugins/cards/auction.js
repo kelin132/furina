@@ -4,7 +4,7 @@
  * Other players bid with .bid <amount>.
  */
 import { findOrCreateUser } from "./db.js";
-import { TIER_EMOJI } from "../../lib/cardApi.mjs";
+import { formatCardLabel } from "../../lib/cardApi.mjs";
 import {
   hasAuction, setAuction, deleteAuction, getAuction, withAuctionLock, withBidderLock,
 } from "../../lib/auctionManager.mjs";
@@ -31,7 +31,6 @@ export async function closeAuction(groupJid) {
 
     const { sock, card, sellerJid, currentBid, currentBidder } = scheduledAuction;
     const auctionId = scheduledAuction.auctionId || `whatsapp:${groupJid}`;
-    const cardEmoji = TIER_EMOJI[card.tier] || "⭐";
 
     // ── No bids — return card to seller ────────────────────────────────────
     if (!currentBidder) {
@@ -46,7 +45,7 @@ export async function closeAuction(groupJid) {
         text: [
           `🔨 *AUCTION ENDED — NO BIDS*`,
           ``,
-          `${cardEmoji} *${card.name}* [${card.tier}]`,
+          formatCardLabel(card),
           ``,
           `Nobody placed a bid. The card has been returned to the seller.`,
         ].join("\n"),
@@ -87,7 +86,7 @@ export async function closeAuction(groupJid) {
         text: [
           `🔨 *AUCTION SOLD!*`,
           ``,
-          `${cardEmoji} *${card.name}* [${card.tier}]`,
+          formatCardLabel(card),
           ``,
           `🏆 Winner : @${winnerNum}`,
           `💰 Paid   : $${currentBid.toLocaleString()}`,
@@ -178,7 +177,6 @@ export default {
     }
 
     const card      = cardUser.cards[cardIndex];
-    const cardEmoji = TIER_EMOJI[card.tier] || "⭐";
     const baseValue = card.price || RESELL_BASE[card.tier] || 200;
 
     let startBid = args[1] ? parseInt(args[1]) : Math.floor(baseValue * 0.3);
@@ -211,8 +209,7 @@ export default {
       text: [
         `🔨 *CARD AUCTION STARTED!*`,
         ``,
-        `${cardEmoji} *${card.name}*`,
-        `⭐ Tier   : ${card.tier}`,
+        formatCardLabel(card),
         `📺 Series : ${card.series || "Unknown"}`,
         ``,
         `💰 Starting bid : $${startBid.toLocaleString()}`,

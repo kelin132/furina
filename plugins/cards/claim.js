@@ -1,5 +1,5 @@
 import { findOrCreateUser } from "./db.js";
-import { sendCardMedia } from "../../lib/cardApi.mjs";
+import { formatCardLabel, sendCardMedia } from "../../lib/cardApi.mjs";
 import { getCardClaimId as getClaimId, matchesCardClaimId as matchesClaimId } from "../../lib/cardClaimId.mjs";
 import { ownsCardSpawnClaim, releaseCardSpawnClaim, reserveCardSpawnClaim } from "../../lib/cardSpawnClaim.mjs";
 
@@ -27,8 +27,7 @@ function claimText(card, sender, prefix = "𝐂𝐀𝐑𝐃 𝐂𝐋𝐀𝐈𝐌
   return `╭─❀「 🃏 *${prefix}* 」❀─╮
 │ 👤 *Claimed by* :: @${sender.split("@")[0]}
 │
-│ 🃏 *Name*      :: \`${card.name}\`
-│ ⭐ *Tier*      :: \`${card.tier}\`
+│ ${formatCardLabel(card)}
 │ 📺 *Series*    :: \`${card.series}\`
 │ 🔢 *Claim #*  :: \`${getClaimId(card)}\`
 │

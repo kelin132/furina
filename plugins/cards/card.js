@@ -1,5 +1,5 @@
 import { findOrCreateUser } from "./db.js";
-import { sendCardMedia, TIER_EMOJI } from "../../lib/cardApi.mjs";
+import { formatCardLabel, sendCardMedia } from "../../lib/cardApi.mjs";
 
 export default {
   name: "card",
@@ -35,7 +35,6 @@ export default {
       }
 
       const card  = user.cards[index - 1];
-      const emoji = TIER_EMOJI[card.tier] || "⭐";
       const isAuctionCard = String(card.spawnId || "").startsWith("web-auction-");
       const priceLabel = isAuctionCard ? "Auction paid" : "Value";
       const priceText = isAuctionCard
@@ -44,9 +43,8 @@ export default {
 
       const caption =
 `╭─❀「 🎴 *𝐂𝐀𝐑𝐃 𝐕𝐈𝐄𝐖* 」❀─╮
-│ ${emoji} \`${card.name || "Unknown"}\`
+│ ${formatCardLabel(card)}
 │
-│ 🏷️  *Tier*   :: \`${card.tier || "Unknown"}\`
 │ 📺 *Series* :: \`${card.series || "Unknown"}\`
 │ 🆔 *ID*     :: \`${card.claimId || card.index || index}\`
 │ 💎 *${priceLabel}* :: \`${priceText}\`

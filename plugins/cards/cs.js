@@ -1,4 +1,4 @@
-import { fetchAllCards, TIER_EMOJI } from "../../lib/cardApi.mjs";
+import { fetchAllCards, formatCardLabel } from "../../lib/cardApi.mjs";
 import { getCardClaimId } from "../../lib/cardClaimId.mjs";
 
 export function findCardsBySeries(cards, query) {
@@ -8,9 +8,8 @@ export function findCardsBySeries(cards, query) {
 }
 
 export function formatSeriesCard(card) {
-  const emoji = TIER_EMOJI[card.tier] || "⭐";
   const claimId = getCardClaimId(card);
-  return `• ${emoji} *${card.name || "Unknown"}* — ${card.tier || "Unknown"} · Claim ID \`${claimId}\``;
+  return `• ${formatCardLabel(card)} · Claim ID \`${claimId}\``;
 }
 
 export default {

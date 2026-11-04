@@ -1,4 +1,4 @@
-import { getCard, TIER_EMOJI } from "../../lib/cardApi.mjs";
+import { getCard, formatCardLabel } from "../../lib/cardApi.mjs";
 
 const TIER_POWER = {
   Common: 1, Uncommon: 2, Rare: 3, Epic: 4, Legendary: 5,
@@ -24,17 +24,15 @@ export default {
       if (!card) return reply(`❌ Card not found for "${query}".`);
 
       const power = TIER_POWER[card.tier] || 1;
-      const emoji = TIER_EMOJI[card.tier]  || "⭐";
       const bar   = "█".repeat(power) + "░".repeat(Math.max(0, 5 - power));
 
       const text =
 `🃏 *RARITY CHECK*
 
-${emoji} *${card.name}*
+${formatCardLabel(card)}
 🆔 ID: ${card.cardId}
 📺 Series: ${card.series}
 
-⭐ Tier: *${card.tier}*
 💥 Power: *${power}/5*
 📊 [${bar}]
 

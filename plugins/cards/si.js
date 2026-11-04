@@ -1,4 +1,4 @@
-import { fetchAllCards, getCard, sendCardMedia, TIER_NAME, TIER_EMOJI } from "../../lib/cardApi.mjs";
+import { fetchAllCards, getCard, sendCardMedia, TIER_NAME, formatCardLabel } from "../../lib/cardApi.mjs";
 import { Col } from "./db.js";
 import { getSeries } from "../../lib/seriesEnrich.mjs";
 import { getCachedLeaderboard } from "../../lib/leaderboardCache.mjs";
@@ -158,8 +158,7 @@ async function getOwners(card) {
 
 function tierLabel(tierNum) {
   const name = TIER_NAME[tierNum] || "Unknown";
-  const emoji = TIER_EMOJI[name] || "";
-  return `${emoji} T${tierNum} ${name}`;
+  return `T${tierNum} ${name}`;
 }
 
 export default {
@@ -227,7 +226,7 @@ export default {
           : "  _No owners yet_";
 
         const text =
-`╭━━━━━━━━━━━━━━━━━━━━╮\n│  📚 *Series Info*\n╰━━━━━━━━━━━━━━━━━━━━╯\n\n🗂️ *${card.series || "Unknown"}*\n🃏 ${card.name}\n⭐ ${tierLabel(card.tierNum)}\n\n━━━━━━━━━━━━━━━━━━━━━\n👥 *Owners (${owners.length})*\n━━━━━━━━━━━━━━━━━━━━━\n${ownerLines}\n\n━━━━━━━━━━━━━━━━━━━━━\n💡 _Other tiers: .si ${card.name} <tier>_\nAvailable: ${sortedTiers.map((t) => `T${t}`).join(", ")}`;
+`╭━━━━━━━━━━━━━━━━━━━━╮\n│  📚 *Series Info*\n╰━━━━━━━━━━━━━━━━━━━━╯\n\n🗂️ *${card.series || "Unknown"}*\n${formatCardLabel(card)}\n\n━━━━━━━━━━━━━━━━━━━━━\n👥 *Owners (${owners.length})*\n━━━━━━━━━━━━━━━━━━━━━\n${ownerLines}\n\n━━━━━━━━━━━━━━━━━━━━━\n💡 _Other tiers: .si ${card.name} <tier>_\nAvailable: ${sortedTiers.map((t) => `T${t}`).join(", ")}`;
 
         return sendSeriesCard(sock, jid, card, text, { quoted: msg, mentions });
       }
@@ -249,7 +248,7 @@ export default {
           : "  _No owners yet_";
 
         const text =
-`╭━━━━━━━━━━━━━━━━━━━━╮\n│  📚 *Series Info*\n╰━━━━━━━━━━━━━━━━━━━━╯\n\n🗂️ *${card.series || "Unknown"}*\n🃏 ${card.name}\n⭐ ${tierLabel(card.tierNum)}\n\n━━━━━━━━━━━━━━━━━━━━━\n👥 *Owners (${owners.length})*\n━━━━━━━━━━━━━━━━━━━━━\n${ownerLines}`;
+`╭━━━━━━━━━━━━━━━━━━━━╮\n│  📚 *Series Info*\n╰━━━━━━━━━━━━━━━━━━━━╯\n\n🗂️ *${card.series || "Unknown"}*\n${formatCardLabel(card)}\n\n━━━━━━━━━━━━━━━━━━━━━\n👥 *Owners (${owners.length})*\n━━━━━━━━━━━━━━━━━━━━━\n${ownerLines}`;
 
         return sendSeriesCard(sock, jid, card, text, { quoted: msg, mentions });
       }

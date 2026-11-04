@@ -2,6 +2,7 @@ import { findOrCreateUser, fmt, tag } from "./db.js";
 import { getUser, saveUser } from "../economy/database.js";
 import { hasActiveBidder, withBidderLock } from "../../lib/auctionManager.mjs";
 import { hasActiveAuctionHolds } from "../../lib/auctionHolds.mjs";
+import { formatCardLabel } from "../../lib/cardApi.mjs";
 
 // In-memory trade requests — keyed by jid+target so each chat is isolated
 const tradeRequests = new Map();
@@ -130,8 +131,7 @@ export default {
         text:
 `$${tag(target)}, ${tag(sender)} wants to sell you their card:
 
-🃏 Card: *${card.name}*
-⭐ Tier: *${card.tier}*
+Card: ${formatCardLabel(card)}
 💰 Price: *$${fmt(price)}*
 
 > Type *.cr accept* to buy this card.

@@ -1,4 +1,4 @@
-import { searchCards, TIER_EMOJI } from "../../lib/cardApi.mjs";
+import { searchCards, formatCardLabel } from "../../lib/cardApi.mjs";
 import { Col } from "./db.js";
 
 function escapeRegex(str) {
@@ -74,7 +74,6 @@ export default {
 ━━━━━━━━━━━━━━━`;
 
       for (const c of slice) {
-        const emoji  = TIER_EMOJI[c.tier] || "⭐";
         const owners = ownerMap.get(c.cardId) || [];
         const ownerList = owners.length
           ? owners.slice(0, 3).join(", ") + (owners.length > 3 ? ` +${owners.length - 3}` : "")
@@ -83,8 +82,7 @@ export default {
         text +=
 `
 
-🃏 *${c.name}*
-${emoji} Tier: ${c.tier}
+${formatCardLabel(c)}
 📺 Series: ${c.series}
 🆔 ID: \`${c.cardId}\`
 👥 Owners: ${ownerList}`;

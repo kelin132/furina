@@ -1,4 +1,4 @@
-import { getCardsByTier, TIER_EMOJI } from "../../lib/cardApi.mjs";
+import { getCardsByTier, formatCardLabel } from "../../lib/cardApi.mjs";
 
 const RARITY_MAP = {
   "1": "1", "2": "2", "3": "3", "4": "4", "5": "5",
@@ -58,17 +58,15 @@ Example: .clist 3  or  .clist rare 2  or  .clist UR`
 
       const start = (page - 1) * limit;
       const slice = cards.slice(start, start + limit);
-      const emoji = TIER_EMOJI[slice[0]?.tier] || "⭐";
-
       let text =
-`〔 ${emoji} *${slice[0]?.tier?.toUpperCase() || "CARDS"} LIST* 〕
+`〔 *${slice[0]?.tier?.toUpperCase() || "CARDS"} LIST* 〕
 
   📦 *Total: ${cards.length}*  〔 *Page ${page}/${totalPages}* 〕
   ━━━━━━━━━━━━━━━━━━━━━━━
 
 `;
       slice.forEach((card, i) => {
-        text += `  *${card.claimId || card.index}.* *${card.name}*\n`;
+        text += `  *${card.claimId || card.index}.* ${formatCardLabel(card)}\n`;
       });
 
       text += `\n  _Use .clist <tier> <page> for more_`;

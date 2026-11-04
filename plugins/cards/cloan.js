@@ -9,6 +9,7 @@
  * Interest: 5%/day — due in 7 days. Overdue = card is forfeited.
  */
 import { findOrCreateUser }                from "./db.js";
+import { formatCardLabel }                 from "../../lib/cardApi.mjs";
 import { getUser, saveUser, addHistory,
          requireRegistration }             from "../economy/database.js";
 
@@ -21,10 +22,6 @@ const TIER_LIMITS = {
   Rare:      3_000,
   Epic:      7_000,
   Legendary: 15_000,
-};
-
-const TIER_EMOJI = {
-  Common: "⚪", Uncommon: "🟢", Rare: "🔵", Epic: "🟣", Legendary: "🟡",
 };
 
 export default {
@@ -55,7 +52,7 @@ export default {
           "🃏 You have no active card loan.\n\n" +
           "Use *.cloan <card number> <amount>* to borrow against a card.\n\n" +
           "*Max loan by rarity:*\n" +
-          "⚪ Common → $500\n🟢 Uncommon → $1,000\n🔵 Rare → $3,000\n🟣 Epic → $7,000\n🟡 Legendary → $15,000"
+          "Common → $500\nUncommon → $1,000\nRare → $3,000\nEpic → $7,000\nLegendary → $15,000"
         );
       }
 
@@ -67,7 +64,7 @@ export default {
       return reply(
 `🃏 *CARD LOAN INFO*
 
-🎴 Collateral : ${TIER_EMOJI[loan.card.tier] || "⭐"} *${loan.card.name}* (${loan.card.tier})
+Collateral : ${formatCardLabel(loan.card)}
 💸 Borrowed   : $${loan.amount.toLocaleString()}
 💹 Interest   : 5%/day
 📅 Due        : ${new Date(loan.due).toDateString()}
@@ -117,7 +114,7 @@ Earn more with *.daily*, *.work*, *.fish*, *.dig*.`
 
 💸 Repaid    : $${total.toLocaleString()}
   (principal $${loan.amount.toLocaleString()} + $${interest.toLocaleString()} interest)
-🎴 Returned  : ${TIER_EMOJI[loan.card.tier] || "⭐"} *${loan.card.name}*
+Returned  : ${formatCardLabel(loan.card)}
 💰 Balance   : $${ecoUser.money.toLocaleString()}
 
 Your card is back in your collection! 🎉`
@@ -157,7 +154,7 @@ Your card is back in your collection! 🎉`
       return reply(
 `❌ *Loan too high!*
 
-🎴 ${TIER_EMOJI[card.tier] || "⭐"} ${card.name} (${card.tier})
+${formatCardLabel(card)}
 💰 Max loan for this tier: $${maxLoan.toLocaleString()}
 💡 You requested: $${amount.toLocaleString()}`
       );
@@ -185,7 +182,7 @@ Your card is back in your collection! 🎉`
     return reply(
 `🃏 *CARD LOAN APPROVED!*
 
-🎴 Collateral : ${TIER_EMOJI[card.tier] || "⭐"} *${card.name}* (${card.tier})
+Collateral : ${formatCardLabel(card)}
 💰 Received   : $${amount.toLocaleString()}
 📅 Due Date   : ${new Date(cardUser.cardLoan.due).toDateString()}
 💹 Interest   : 5% per day

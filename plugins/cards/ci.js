@@ -1,5 +1,5 @@
 import { findOrCreateUser, Col, uid } from "./db.js";
-import { fetchAllCards, getCard, searchCards, sendCardMedia } from "../../lib/cardApi.mjs";
+import { fetchAllCards, getCard, searchCards, sendCardMedia, formatCardLabel } from "../../lib/cardApi.mjs";
 import { getSeriesCached, prefetchSeries } from "../../lib/seriesEnrich.mjs";
 
 function normaliseQuery(value) {
@@ -168,24 +168,17 @@ export default {
       const priceText = isAuctionCard
         ? `${cardPrice.toLocaleString()} coins`
         : `$${cardPrice.toLocaleString()}`;
-      const tier     = card.tierNum || card.tier || "—";
       const series   = card.series  || "—";
-
-      const tierStars =
-        typeof tier === "number" || /^\d+$/.test(String(tier))
-          ? "⭐".repeat(Math.min(Number(tier), 5))
-          : null;
 
       const text =
 `╭━━━━━━━━━━━━━━━━━━━━╮
 │  🃏 *Card Info*
 ╰━━━━━━━━━━━━━━━━━━━━╯
 
-✨ \`${card.name || "Unknown"}\`${collNum ? `  ·  \`#${collNum}\`` : ""}
+${formatCardLabel(card)}${collNum ? `  ·  \`#${collNum}\`` : ""}
 📚 \`${series}\`
 
 ━━━━━━━━━━━━━━━━━━━━━
-⭐ *Tier:*     \`${tier}\`${tierStars ? `  ${tierStars}` : ""}
 🆔 *Card ID:*  \`${cardIdVal}\`
 💰 *${valueLabel}:* \`${priceText}\`
 🏷️ *Spawn ID:* \`${spawnId}\`

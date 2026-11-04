@@ -1,10 +1,5 @@
 import { findOrCreateUser } from "./db.js";
-import { TIER_EMOJI } from "../../lib/cardApi.mjs";
-
-const STARS = {
-  Common: 1, Uncommon: 2, Rare: 3, Epic: 4, Legendary: 5, Mythical: 5, Secret: 5,
-  C: 5, R: 5, SR: 5, SSR: 5, UR: 5, X: 5,
-};
+import { formatCardLabel } from "../../lib/cardApi.mjs";
 const MAX_DECKS = 10;
 const MAX_CARDS_PER_DECK = 12;
 
@@ -33,8 +28,7 @@ Then add a card from your collection with *.deck add Favorites 3*.`;
 }
 
 function cardLine(card, index) {
-  const emoji = TIER_EMOJI[card.tier] || "⭐";
-  return `${index + 1}. ${emoji} *${card.name}* — ${card.tier || "Common"} (${card.series || "Unknown"})`;
+  return `${index + 1}. ${formatCardLabel(card)} — ${card.series || "Unknown"}`;
 }
 
 export default {
@@ -160,10 +154,7 @@ export default {
 
       for (let i = 0; i < deckSlice.length; i++) {
         const card = deckSlice[i];
-        const emoji = TIER_EMOJI[card.tier] || "⭐";
-        const starCount = STARS[card.tier] || 1;
-        text += `  *${start + i + 1}.* *${card.name}*\n`;
-        text += `  ${emoji} *${card.tier || "Common"}*  ${"⭐".repeat(starCount)}\n`;
+        text += `  *${start + i + 1}.* ${formatCardLabel(card)}\n`;
         text += `  📺 *${card.series || "Unknown"}*\n\n`;
       }
 

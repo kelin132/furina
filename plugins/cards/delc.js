@@ -1,4 +1,5 @@
 import { findOrCreateUser } from "./db.js";
+import { formatCardLabel } from "../../lib/cardApi.mjs";
 
 export default {
   name: "delc",
@@ -30,8 +31,6 @@ export default {
       }
 
       const card     = user.cards[index];
-      const cardName = card.name || "Unknown Card";
-      const cardTier = card.tier || "Unranked";
 
       user.cards.splice(index, 1);
       user.totalCards = Math.max(0, (user.totalCards || 1) - 1);
@@ -40,8 +39,7 @@ export default {
       return reply(
 `🗑️ *CARD REMOVED*
 
-🃏 *${cardName}*
-⭐ Tier: ${cardTier}
+${formatCardLabel(card)}
 
 Card permanently removed from your collection.`
       );
