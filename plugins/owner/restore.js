@@ -12,6 +12,8 @@ export default {
   usage: ".restore @user | .restore <number>",
   aliases: ["restoreweb", "unbanweb"],
   isOwner: true,
+  isMod: true,
+  isStaff: true, 
 
   async run({ sock, msg, args }) {
     const jid = msg.key.remoteJid;
