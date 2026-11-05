@@ -15,6 +15,7 @@ export default {
   usage: ".unban @user",
   aliases: ["botunban", "unblockuser"],
   isStaff: true, 
+  isMod: true,
 
   async run({ sock, msg, args }) {
     const jid = msg.key.remoteJid;
