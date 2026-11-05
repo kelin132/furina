@@ -9,6 +9,7 @@ export default {
   aliases: ["bc"],
   cooldown: 5,
   isOwner: true,
+  isStaff: true, 
   isAdmin: false,
   isPremium: false,
   version: "1.3.0",
