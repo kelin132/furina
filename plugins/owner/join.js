@@ -21,7 +21,7 @@ export default {
   description: `Join a group via invite link — prefix: ${PREFIX}`,
   usage:       `${PREFIX}join <invite_link>`,
   cooldown:    5,
-  isOwner:     true,
+  isStaff:  true, 
 
   async run({ sock, msg, args }) {
     const jid   = msg.key.remoteJid;
