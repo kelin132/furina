@@ -1,6 +1,7 @@
 import { getQuickProfileUser, getUser, requireRegistration } from "./database.js";
 import { generateProfileImage, getProfilePic, resolveRole } from "../../lib/profileGen.mjs";
 import { generateAnimatedProfileCard } from "../../lib/profileAnimation.mjs";
+import { resolveProfileVideoSource } from "../../lib/profileMedia.mjs";
 import { getLevelRole, getAllEarnedRoles, getLevelRoleLabel } from "../../lib/levelRoles.mjs";
 import { getUserProfileSummary } from "../cards/db.js";
 import { countTrainerPokemon } from "../../lib/pokemon/pokemonDb.mjs";
@@ -128,20 +129,6 @@ export function resolveProfileImageSources({ cardUser, user, profilePicFromSocke
         ? cardUser.profileBackground || null
         : cardUser?.profileBackground || user?.profileBackground || null,
   };
-}
-
-export function resolveProfileVideoSource({ cardUser, user }) {
-  const fields = ["avatarVideo", "avatarVideoUrl", "profileVideoUrl", "profileVideo"];
-  const hasUserVideo = user && fields.some((field) =>
-    Object.prototype.hasOwnProperty.call(user, field),
-  );
-  const userVideo = fields
-    .map((field) => user?.[field])
-    .find((value) => typeof value === "string" && /^https?:\/\//i.test(value));
-  if (userVideo || hasUserVideo) return userVideo || null;
-  return fields
-    .map((field) => cardUser?.[field])
-    .find((value) => typeof value === "string" && /^https?:\/\//i.test(value)) || null;
 }
 
 export default {

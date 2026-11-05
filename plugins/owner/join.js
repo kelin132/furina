@@ -1,6 +1,6 @@
 /**
  * KELIN MD — .join
- * Owner-only command to join a group via invite link.
+ * Staff level 2+ command to join a group via invite link.
  *
  * Settings pulled from settings.cjs (botName, ownerName).
  * No external lib needed — uses Baileys sock.groupGetInviteInfo +
@@ -21,7 +21,8 @@ export default {
   description: `Join a group via invite link — prefix: ${PREFIX}`,
   usage:       `${PREFIX}join <invite_link>`,
   cooldown:    5,
-  isStaff:  true, 
+  isStaff: true,
+  minStaffLevel: 2,
 
   async run({ sock, msg, args }) {
     const jid   = msg.key.remoteJid;

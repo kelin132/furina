@@ -31,9 +31,17 @@ test("owner-category commands allow level 3 but not lower staff", () => {
   assert.equal(canRunOwnerCommand(command, false, 2), false);
 });
 
+test("only owner commands explicitly marked for level 2 allow staff level 2", () => {
+  const command = { category: "owner", isOwner: true, minStaffLevel: 2 };
+  assert.equal(canRunOwnerCommand(command, false, 2), true);
+  assert.equal(canRunOwnerCommand(command, false, 1), false);
+  assert.equal(canRunOwnerCommand({ category: "owner", isOwner: true }, false, 2), false);
+});
+
 test("strict owner commands remain limited to the configured bot owner", () => {
-  const command = { isOwner: true, strictOwner: true };
+  const command = { isOwner: true, strictOwner: true, minStaffLevel: 2 };
   assert.equal(canRunOwnerCommand(command, false, 3), false);
+  assert.equal(canRunOwnerCommand(command, false, 2), false);
   assert.equal(canRunOwnerCommand(command, true, 0), true);
 });
 

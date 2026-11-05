@@ -10,10 +10,11 @@ import { reloadAkiraAI } from "../../lib/akiraHandler.mjs";
 export default {
   name: "restart",
   aliases: ["reboot", "rs"],
-  description: "Restart the WhatsApp connection without stopping the panel (owner only)",
+  description: "Restart the WhatsApp connection without stopping the panel (staff level 2+)",
   category: "owner",
   usage: ".restart",
   isStaff: true,
+  minStaffLevel: 2,
 
   async run({ sock, msg }) {
     const jid = msg.key.remoteJid;
