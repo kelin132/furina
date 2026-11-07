@@ -17,6 +17,8 @@ export default {
   usage: ".ban @user [reason]",
   aliases: ["botban", "blockuser"],
   isMod: true,
+  isStaff: true,
+  minStaffLevel: 1,
 
   async run({ sock, msg, args, sender, isActualOwner, staffLevel = 0 }) {
     const jid = msg.key.remoteJid;
