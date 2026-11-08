@@ -21,11 +21,11 @@ async function getPokeSpawn(chatId) {
 }
 
 export default {
-  name:        "spawnpoke",
-  aliases:     ["pokespawn", "pokeautospawn", "wildautospawn"],
+  name:        "pokespawn",
+  aliases:     ["pokeautospawn", "wildautospawn"],
   description: "Turn automatic Pokémon spawns on or off in this group",
   category:    "pokemon",
-  usage:       ".spawnpoke on | off | status",
+  usage:       ".pokespawn on | off | status",
   isMod:       true,
   isAdmin:     true,
   async run({ sock, msg, sender, args }) {
@@ -55,8 +55,8 @@ export default {
 Status: ${enabled ? "On" : "Off"}
 Interval: 15–20 minutes
 
-*.spawnpoke on* — enable
-*.spawnpoke off* — disable`,
+*.pokespawn on* — enable
+*.pokespawn off* — disable`,
     }, { quoted: msg });
   },
 };
