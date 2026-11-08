@@ -13,10 +13,11 @@ import {
   maybeAutoDraw,
   queueLotteryAnnouncement,
 } from "../../lib/lotteryAutoDraw.mjs";
+import { getEconomyPreviewConfig } from "../../lib/economyPreview.mjs";
 
 const mentionFor = (userId) => `@${String(userId).split("@")[0]}`;
 
-const TICKET_PRICE  = 10_000;
+const TICKET_PRICE  = 15_000;
 const MAX_TICKETS   = 1;
 const MIN_JACKPOT   = 10_000_000;
 const MAX_JACKPOT   = 50_000_000;
@@ -158,7 +159,7 @@ export default {
       }
 
       return reply(
-        `✅ You have entered the global lottery.\n🎟️ One ticket purchased for $${cost.toLocaleString()}.\n💰 Wallet remaining: $${user.money.toLocaleString()}\n🍀 Good luck!`,
+        `You have bought a ticket for $${cost.toLocaleString()}, Goodluck!\n${getEconomyPreviewConfig("lottery")?.url ?? ""}`,
       );
     }
 

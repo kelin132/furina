@@ -11,11 +11,11 @@ const SPAWN_COOLDOWN_MS = 100 * 1000; // 100 seconds between spawns per group
 const spawnCooldowns = new Map();
 
 export default {
-  name: "spawnpoke",
-  aliases: ["wildpoke", "encounter"],
+  name: "wildpoke",
+  aliases: ["encounter"],
   description: "Spawn a random wild Pokémon in the group",
   category: "pokemon",
-  usage: ".spawnpoke",
+  usage: ".wildpoke",
 
   async run({ sock, msg, sender }) {
     const jid = msg.key.remoteJid;
@@ -86,7 +86,7 @@ export default {
     setWild(jid, wildPoke, sender, (pokeName) => {
       // Send "fled away" message when the 30-min timer fires
       sock.sendMessage(jid, {
-        text: `🌿 *${pokeName}* got tired of waiting and *fled away!* 🏃\nUse \`.spawnpoke\` to encounter a new wild Pokémon.`,
+        text: `🌿 *${pokeName}* got tired of waiting and fled away.\nUse \`.wildpoke\` to encounter another Pokémon.`,
       }).catch(() => {});
     });
     const typeEmojis = { fire:"🔥",water:"💧",grass:"🍃",electric:"⚡",psychic:"🔮",

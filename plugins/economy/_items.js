@@ -71,14 +71,14 @@ export const SHOP_ITEMS = {
   basic_fishing_rod: {
     price: 1_000, orbCost: 0, gemCost: 0, emoji: "🎣",
     rarity: "common", xpBonus: 0, sellPct: 0.3, category: "tools",
-    description: "A simple rod for fishing practice and XP.",
-    useEffect: "xp+20", inventory: true,
+    description: "Required to fish; stays in your inventory.",
+    inventory: true,
   },
   pickaxe: {
     price: 2_500, orbCost: 0, gemCost: 0, emoji: "⛏️",
     rarity: "common", xpBonus: 0, sellPct: 0.3, category: "tools",
-    description: "A mining tool that grants XP when used.",
-    useEffect: "xp+25", inventory: true,
+    description: "Required to mine; stays in your inventory.",
+    inventory: true,
   },
   potion: {
     price: 500, orbCost: 0, gemCost: 0, emoji: "🧪",

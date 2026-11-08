@@ -40,7 +40,7 @@ export default {
 
       await sock.sendMessage(jid, {
         image:   buf,
-        caption: `📷 *QR Code Generated*\n\n🔗 Content: ${preview}\n\n✨ *KELIN MD*`,
+        caption: `📷 *QR Code Generated*\n\n🔗 Content: ${preview}`,
       }, { quoted: msg });
 
     } catch (err) {
@@ -57,7 +57,7 @@ export default {
 
         return sock.sendMessage(jid, {
           image:   buf2,
-          caption: `📷 *QR Code Generated*\n\n🔗 Content: ${preview}\n\n✨ *KELIN MD*`,
+          caption: `📷 *QR Code Generated*\n\n🔗 Content: ${preview}`,
         }, { quoted: msg });
       } catch (err2) {
         console.error("[qr] fallback failed:", err2.message);

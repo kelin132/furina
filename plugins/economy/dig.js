@@ -33,6 +33,10 @@ export default {
 
     const user = await getUser(sender);
 
+    if (!(user.inventory || []).includes("pickaxe")) {
+      return reply("Buy a Pickaxe from .shop before mining.");
+    }
+
     if (now - (user.lastDig || 0) < COOLDOWN) {
       const rem = COOLDOWN - (now - user.lastDig);
       const secs = Math.ceil(rem / 1000);

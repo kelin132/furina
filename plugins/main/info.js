@@ -14,7 +14,7 @@ function getPreviewThumbnail() {
 
 function getBotName() {
   const runtime = getRuntimeSettings();
-  return runtime.botName || process.env.BOT_NAME || "KELIN MD";
+  return runtime.botName || process.env.BOT_NAME || "AIDORU Bot";
 }
 
 function buildInfoMessage() {

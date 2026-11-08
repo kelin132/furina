@@ -61,7 +61,7 @@ export default {
       if (!mediaUrl) throw new Error("No Instagram media link returned");
       const file = await downloadMediaBuffer(mediaUrl);
       title = String(title || "Instagram Post").slice(0, 200);
-      const caption = `📥 *${title}*\n✨ *Powered by KELIN MD*`;
+      const caption = `📥 *${title}*`;
       const mimetype = String(file.mimetype || '').toLowerCase();
 
       if (mimetype.startsWith('video/') || /reel|tv/i.test(url)) {

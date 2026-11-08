@@ -1,11 +1,11 @@
 import { isSpawnEnabled, setSpawnEnabled } from "./db.js";
 
 export default {
-  name: "cardspawn",
-  aliases: ["spawncard", "cardauto"],
+  name: "cards",
+  aliases: ["cardspawn", "spawncard", "cardauto"],
   description: "Enable or disable automatic card spawning every 12–15 minutes",
   category: "cards",
-  usage: ".cardspawn on | .cardspawn off | .cardspawn status",
+  usage: ".cards on | .cards off | .cards status",
   isAdmin: true,
   isOwner: true,
 
@@ -22,7 +22,7 @@ export default {
     if (sub === "status") {
       const enabled = await isSpawnEnabled(chatId);
       await sock.sendMessage(chatId, {
-        text: `🃏 *Auto Card Spawn*\n\nStatus: ${enabled ? "✅ *ON*" : "❌ *OFF*"}\nInterval: every *12–15 minutes*\n\nUse *.cardspawn on* / *.cardspawn off* to change.`,
+        text: `🃏 *Auto Card Spawn*\n\nStatus: ${enabled ? "✅ *ON*" : "❌ *OFF*"}\nInterval: every *12–15 minutes*\n\nUse *.cards on* / *.cards off* to change.`,
       }, { quoted: msg });
       return;
     }
@@ -30,8 +30,7 @@ export default {
     if (sub === "on") {
       await setSpawnEnabled(chatId, true);
       await sock.sendMessage(chatId, {
-        text:
-          `Card spawning is now on. A card will appear every *12–15 minutes*; use *.claim <number>* to collect it.`,
+        text: "Card spawning is on. A card will appear every 12–15 minutes.",
       }, { quoted: msg });
       return;
     }
@@ -39,13 +38,13 @@ export default {
     if (sub === "off") {
       await setSpawnEnabled(chatId, false);
       await sock.sendMessage(chatId, {
-        text: "❌ *Auto Card Spawn: OFF*\n\nNo more automatic cards in this group.",
+        text: "Card spawning is off.",
       }, { quoted: msg });
       return;
     }
 
     await sock.sendMessage(chatId, {
-      text: "❌ Usage: *.cardspawn on* | *.cardspawn off* | *.cardspawn status*",
+      text: "Usage: *.cards on* | *.cards off* | *.cards status*",
     }, { quoted: msg });
   },
 };

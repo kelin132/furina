@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#07131f"/>
+      <stop offset="1" stop-color="#123744"/>
+    </linearGradient>
+    <linearGradient id="ticket" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#c3fff2"/>
+      <stop offset="1" stop-color="#61e4d7"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="630" fill="url(#bg)"/>
+  <circle cx="1020" cy="120" r="230" fill="#26c6bb" opacity=".12"/>
+  <circle cx="170" cy="570" r="260" fill="#43c7bb" opacity=".09"/>
+  <g transform="translate(150 155) rotate(-5 450 160)">
+    <path d="M30 0h840v74c-38 0-38 66 0 66v74H30v-74c38 0 38-66 0-66z" fill="url(#ticket)" stroke="#eafffb" stroke-width="8"/>
+    <path d="M690 20v174" stroke="#0f4d51" stroke-width="5" stroke-dasharray="10 12" opacity=".65"/>
+    <text x="78" y="82" fill="#072b35" font-family="Arial,sans-serif" font-size="28" font-weight="700" letter-spacing="6">AIDORU • LOTTERY</text>
+    <text x="78" y="145" fill="#062630" font-family="Arial,sans-serif" font-size="52" font-weight="900">YOUR NEXT DRAW</text>
+    <text x="78" y="186" fill="#14545a" font-family="Arial,sans-serif" font-size="22" font-weight="700">CHECK THE LIVE PRIZE POOL &amp; YOUR ODDS</text>
+    <circle cx="782" cy="102" r="48" fill="#072b35"/>
+    <text x="782" y="117" text-anchor="middle" fill="#b8fff3" font-family="Arial,sans-serif" font-size="42" font-weight="900">16</text>
+  </g>
+  <text x="600" y="520" text-anchor="middle" fill="#d8fffb" font-family="Arial,sans-serif" font-size="27" font-weight="700" letter-spacing="5">AIDORU LOTTERY TRACKER</text>
+</svg>

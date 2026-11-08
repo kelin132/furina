@@ -152,7 +152,7 @@ export default {
         video: file.buffer,
         mimetype,
         fileName: `${trackTitle}.mp4`,
-        caption: `🎬 *${trackTitle}*\n\n✨ *KELIN MD*`,
+        caption: `🎬 *${trackTitle}*`,
       }, { quoted: msg });
 
     } catch (err) {

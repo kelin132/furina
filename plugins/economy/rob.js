@@ -1,4 +1,4 @@
-import { getUser, saveUser, requireRegistration, isRegistered, addHistory } from "./database.js";
+import { getUser, saveUser, requireRegistration, isRegistered, addHistory, jailUser } from "./database.js";
 import { hasActiveGun } from "../../lib/economySecurity.mjs";
 
 function fmt(n) {
@@ -99,11 +99,14 @@ export default {
     } else {
       const fine   = Math.floor(amount * 0.7);
       robber.money = Math.max(0, robber.money - fine);
+      robber.jailed = true;
+      robber.jailUntil = Date.now() + 10 * 60 * 1000;
       await saveUser(sender, robber);
+      await jailUser(sender, 10 * 60 * 1000);
       await addHistory(sender, "rob", -fine, `Rob failed — fined $${fine.toLocaleString()}`);
 
       await reply([
-        `🚔 You tried to rob another player but got caught and were fined ${fmt(fine)}. ⏳ Lie low for 45m.`,
+        `🚔 You were caught and fined ${fmt(fine)}. You are jailed for 10 minutes.`,
         "",
         `Wallet: ${fmt(robber.money)} • Orbs: ${robber.orbs || 0} • Items: ${(robber.inventory || []).length} • XP: +0.`,
       ].join("\n"));

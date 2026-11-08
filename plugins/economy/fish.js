@@ -32,6 +32,10 @@ export default {
 
     const user = await getUser(sender);
 
+    if (!(user.inventory || []).includes("basic_fishing_rod")) {
+      return reply("Buy a Fishing Rod from .shop before fishing.");
+    }
+
     if (now - (user.lastFish || 0) < COOLDOWN) {
       const rem = COOLDOWN - (now - user.lastFish);
       const secs = Math.ceil(rem / 1000);

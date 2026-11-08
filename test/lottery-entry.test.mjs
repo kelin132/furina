@@ -83,9 +83,9 @@ test("concurrent purchases from different users do not overwrite tickets", async
   assert.equal((await round()).totalTickets, 2);
   assert.equal((await round()).jackpot, 10001000);
 });
-test("a round accepts exactly twenty tickets and refunds the twenty-first entry", async () => {
-  const ticketPrice = 500;
-  for (let index = 0; index < 20; index += 1) {
+test("a round accepts exactly sixteen tickets and refunds the seventeenth entry", async () => {
+  const ticketPrice = 15_000;
+  for (let index = 0; index < 16; index += 1) {
     const sender = `263771200${String(index).padStart(3, "0")}@s.whatsapp.net`;
     db.data.users.push({ _id: sender, registered: true, money: 50000 });
     const result = await purchaseLotteryTicket({
@@ -99,26 +99,26 @@ test("a round accepts exactly twenty tickets and refunds the twenty-first entry"
   }
   const extra = "263771299999@s.whatsapp.net";
   db.data.users.push({ _id: extra, registered: true, money: 50000 });
-  assert.equal((await round()).totalTickets, 20);
+  assert.equal((await round()).totalTickets, 16);
   assert.equal((await purchaseLotteryTicket({ db, lot: await round(), sender: extra, price: ticketPrice })).reason, "drawing");
   assert.equal((await db.collection("users").findOne({ _id: extra })).money, 50000);
-  assert.equal((await round()).tickets.length, 20);
+  assert.equal((await round()).tickets.length, 16);
 });
-test("the draw waits for twenty tickets, then pays three distinct winners", async () => {
-  const tickets = Array.from({ length: 20 }, (_, index) => {
+test("the draw waits for sixteen tickets, then pays three distinct winners", async () => {
+  const tickets = Array.from({ length: 16 }, (_, index) => {
     const userId = `263771300${String(index).padStart(3, "0")}@s.whatsapp.net`;
     db.data.users.push({ _id: userId, registered: true, money: 0 });
     return { userId, count: 1, name: `Player ${index + 1}` };
   });
   const lottery = db.data.lottery[0];
-  lottery.tickets = tickets.slice(0, 19);
-  lottery.totalTickets = 19;
-  assert.equal((await drawLottery({ db, minimumEntries: 20 })).reason, "minimum");
+  lottery.tickets = tickets.slice(0, 15);
+  lottery.totalTickets = 15;
+  assert.equal((await drawLottery({ db, minimumEntries: 16 })).reason, "minimum");
   lottery.tickets = tickets;
-  lottery.totalTickets = 20;
-  const result = await drawLottery({ db, minimumEntries: 20 });
+  lottery.totalTickets = 16;
+  const result = await drawLottery({ db, minimumEntries: 16 });
   assert.equal(result.ok, true);
-  assert.equal(result.totalTickets, 20);
+  assert.equal(result.totalTickets, 16);
   assert.equal(result.winners.length, 3);
   assert.equal(new Set(result.winners.map((winner) => winner.userId)).size, 3);
 });
@@ -158,7 +158,7 @@ test("the actual command rejects a linked user's second platform purchase", asyn
   const msg = { key: { remoteJid: "fixture@g.us" } };
   await command.run({ sock, msg, sender: phone, args: [] });
   await command.run({ sock, msg, sender: phone, rawSender: discordId, args: [], discord: { message: { author: { id: discordId } } } });
-  assert.match(replies[0], /entered the global lottery/);
+  assert.match(replies[0], /bought a ticket for \$15,000, Goodluck!/i);
   assert.match(replies[1], /already/);
   assert.equal((await round()).tickets.length, 1);
   assert.ok(await findAccountLotteryTicket(db, (await round()).tickets, discordKey));

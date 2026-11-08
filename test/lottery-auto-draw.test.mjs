@@ -8,20 +8,20 @@ import {
   pickLotteryWinners,
 } from "../lib/lotteryAutoDraw.mjs";
 
-test("lottery draws after twenty one-ticket participants", () => {
-  assert.equal(LOTTERY_MAX_ENTRIES, 20);
+test("lottery draws after sixteen one-ticket participants", () => {
+  assert.equal(LOTTERY_MAX_ENTRIES, 16);
 });
 
 test("lottery winner selection uses bounded random rolls and never repeats a ticket", () => {
-  const tickets = Array.from({ length: 20 }, (_, index) => ({ userId: `player-${index}`, count: 1 }));
+  const tickets = Array.from({ length: 16 }, (_, index) => ({ userId: `player-${index}`, count: 1 }));
   const bounds = [];
   const winners = pickLotteryWinners(tickets, 3, (upperBound) => {
     bounds.push(upperBound);
     return upperBound - 1;
   });
-  assert.deepEqual(bounds, [20, 19, 18]);
+  assert.deepEqual(bounds, [16, 15, 14]);
   assert.equal(new Set(winners.map((ticket) => ticket.userId)).size, 3);
-  assert.deepEqual(winners.map((ticket) => ticket.userId), ["player-19", "player-18", "player-17"]);
+  assert.deepEqual(winners.map((ticket) => ticket.userId), ["player-15", "player-14", "player-13"]);
 });
 
 test("normalizes WhatsApp phone mentions to a full Baileys JID", () => {

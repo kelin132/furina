@@ -1,6 +1,6 @@
 export default {
   name: "alive",
-  description: "Check if KELIN MD is alive and running",
+  description: "Check whether the bot is online",
   category: "main",
   usage: ".alive",
   aliases: ["online", "status"],

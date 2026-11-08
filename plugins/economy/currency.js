@@ -50,7 +50,8 @@ export function bankTierForUser(user = {}) {
 }
 
 export function bankLimitForUser(user = {}) {
-  return bankTierForUser(user).limit;
+  const levelBonus = Math.max(0, Math.floor(Number(user.level) || 0)) * 10_000;
+  return bankTierForUser(user).limit + levelBonus;
 }
 
 export function getBettingTier(amount) {

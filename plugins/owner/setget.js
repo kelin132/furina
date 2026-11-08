@@ -98,7 +98,7 @@ export default {
 ┃ ✦ Usage: .getinfo <code>
 ┃
 ┃ 📌 Example:
-┃    .getinfo KELIN500
+┃    .getinfo PLAYER123
 ╰━━━━━━━━━━━━━━━━━━━━╯
 🌸 Provide a code to inspect 🌸`
         }, { quoted: msg });
@@ -160,7 +160,7 @@ export default {
 ┃ ✦ Usage: .deleteget <code>
 ┃
 ┃ 📌 Example:
-┃    .deleteget KELIN500
+┃    .deleteget PLAYER123
 ╰━━━━━━━━━━━━━━━━━━━━╯
 🌸 Provide a code to delete 🌸`
         }, { quoted: msg });
@@ -211,7 +211,7 @@ export default {
 ┃            <YYYY-MM-DD> [maxUses]
 ┣━━━━━━━━━━━━━━━━━━━━
 ┃ 📌 Examples:
-┃  .setget KELIN500 500000
+┃  .setget PLAYER123 500000
 ┃          2025-12-31
 ┃
 ┃  .setget BONUS100 100000
@@ -240,7 +240,7 @@ export default {
 ┃ ✦ Amount must be a positive number.
 ┃
 ┃ 📌 Example:
-┃    .setget KELIN500 500000
+┃    .setget PLAYER123 500000
 ┃            2025-12-31
 ╰━━━━━━━━━━━━━━━━━━━━╯
 🌸 Please check and try again 🌸`
@@ -257,7 +257,7 @@ export default {
 ┃ ✦ Use the format: YYYY-MM-DD
 ┃
 ┃ 📌 Example:
-┃    .setget KELIN500 500000
+┃    .setget PLAYER123 500000
 ┃            2025-12-31
 ╰━━━━━━━━━━━━━━━━━━━━╯
 🌸 Please check and try again 🌸`
