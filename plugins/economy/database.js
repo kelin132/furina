@@ -27,6 +27,11 @@ export const DEFAULTS = {
   bankUpgradeLevel: 0,
   orbs:          0,           // premium currency earned from dig/fish/events
   diamonds:      0,           // rare currency earned from lucky activities
+  membershipTier: "none",
+  isPremium:     false,
+  genesisCrystals: 0,
+  membershipCashGranted: 0,
+  membershipCrystalsGranted: 0,
   level:         1,
   xp:            0,
   bio:           "",

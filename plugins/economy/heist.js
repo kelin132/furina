@@ -15,6 +15,22 @@ const WIN_MULTIPLIER = 1.8;        // 80% profit on each stake
 const SUCCESS_RATE   = 0.55;       // 55% success
 
 const activeHeists = new Map();    // jid → { starter, stake, members, timeout }
+const HEIST_ITEMS = ["hack_kit", "med_kit"];
+
+function hasHeistItems(user) {
+  const inventory = Array.isArray(user.inventory) ? user.inventory : [];
+  return HEIST_ITEMS.every((item) => inventory.includes(item));
+}
+
+function consumeHeistItems(user) {
+  const inventory = Array.isArray(user.inventory) ? [...user.inventory] : [];
+  for (const item of HEIST_ITEMS) inventory.splice(inventory.indexOf(item), 1);
+  user.inventory = inventory;
+}
+
+function refundHeistItems(user) {
+  user.inventory = [...(Array.isArray(user.inventory) ? user.inventory : []), ...HEIST_ITEMS];
+}
 
 function fmt(n) {
   if (n >= 1e9) return `$${(n/1e9).toFixed(1)}B`;
@@ -86,6 +102,7 @@ ${names}
       for (const m of heist.members) {
         const u = await getUser(m.id);
         u.money = (u.money || 0) + m.stake;
+        refundHeistItems(u);
         await saveUser(m.id, u);
       }
       activeHeists.delete(jid);
@@ -124,6 +141,7 @@ ${names}
 ╰───────────────❀`
         );
       }
+      if (!hasHeistItems(user)) return reply("Buy a Hack Kit and Med Kit from .shop before joining a heist.");
       if (user.money < heist.stake) {
         return reply(
 `╭─❀「 🏦 *𝐇𝐄𝐈𝐒𝐓* 」❀─╮
@@ -136,6 +154,7 @@ ${names}
       }
 
       user.money -= heist.stake;
+      consumeHeistItems(user);
       await saveUser(sender, user);
       heist.members.push({ id: sender, stake: heist.stake });
 
@@ -175,6 +194,7 @@ ${names}
 ╰───────────────❀`
       );
     }
+    if (!hasHeistItems(user)) return reply("Buy a Hack Kit and Med Kit from .shop before starting a heist.");
     if (user.money < stake) {
       return reply(
 `╭─❀「 🏦 *𝐇𝐄𝐈𝐒𝐓* 」❀─╮
@@ -187,6 +207,7 @@ ${names}
     }
 
     user.money -= stake;
+    consumeHeistItems(user);
     await saveUser(sender, user);
 
     const heist = {
@@ -237,7 +258,7 @@ async function executeHeist(sock, jid, heist) {
   }
 
   if (won) {
-    const payout = Math.floor((totalPot * WIN_MULTIPLIER) / heist.members.length);
+    const payout = Math.floor(totalPot / heist.members.length) + 10_000_000;
     for (const m of heist.members) {
       const u = await getUser(m.id);
       u.money = (u.money || 0) + payout;
@@ -251,7 +272,7 @@ async function executeHeist(sock, jid, heist) {
 │ 🌙 *Result*   :: *SUCCESS 🟢*
 │ 🍃 *Flavour*  :: _完璧な強盗！誰も見てない！_
 │
-│ 💰 *Total*    :: *${fmt(totalPot * WIN_MULTIPLIER)}*
+│ 💰 *Total*    :: *${fmt(payout * heist.members.length)}*
 │ 💰 *Per Head* :: *+${fmt(payout)}*
 │
 │ 🦹 *The security never saw it coming!*
@@ -264,6 +285,7 @@ async function executeHeist(sock, jid, heist) {
       for (const m of heist.members) {
         const u = await getUser(m.id);
         u.money = (u.money || 0) + m.stake;
+        refundHeistItems(u);
         await saveUser(m.id, u);
       }
 

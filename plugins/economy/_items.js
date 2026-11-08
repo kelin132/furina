@@ -80,6 +80,24 @@ export const SHOP_ITEMS = {
     description: "Required to mine; stays in your inventory.",
     inventory: true,
   },
+  getaway_tool: {
+    price: 250_000, orbCost: 0, gemCost: 0, emoji: "🧰",
+    rarity: "rare", xpBonus: 0, sellPct: 0.3, category: "tools",
+    description: "Escape jail once; consumed when used with .escape.",
+    inventory: true,
+  },
+  hack_kit: {
+    price: 1_000_000, orbCost: 0, gemCost: 0, emoji: "💻",
+    rarity: "rare", xpBonus: 0, sellPct: 0.3, category: "tools",
+    description: "Required for a group heist; consumed when the crew starts.",
+    inventory: true,
+  },
+  med_kit: {
+    price: 250_000, orbCost: 0, gemCost: 0, emoji: "🩹",
+    rarity: "common", xpBonus: 0, sellPct: 0.3, category: "tools",
+    description: "Required for a group heist; consumed when the crew starts.",
+    inventory: true,
+  },
   potion: {
     price: 500, orbCost: 0, gemCost: 0, emoji: "🧪",
     rarity: "common", xpBonus: 0, sellPct: 0.5, category: "potions",
