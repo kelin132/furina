@@ -3,7 +3,7 @@
 
 import { getBattle, updateBattle, endBattle, isMyTurn, claimBattleReward } from "../../lib/pokemon/battleState.mjs";
 import { clearWild, updateWildHp } from "../../lib/pokemon/wildState.mjs";
-import { getTrainer, removeItem, addItem } from "../../lib/pokemon/players.mjs";
+import { getTrainer, removeItem, addItem, recordDailyPokemonWildWin } from "../../lib/pokemon/players.mjs";
 import { addMoney } from "../economy/database.js";
 import { updatePokemon, addPokemonXP, buildPokemon, savePokemon, getTrainerParty, getPokemonXpNeeded, evolvePokemon } from "../../lib/pokemon/pokemonDb.mjs";
 import { addToParty, addToPC, updateTrainer } from "../../lib/pokemon/players.mjs";
@@ -180,6 +180,9 @@ async function handleWildDefeat(sock, jid, msg, battle, trainer) {
 
   if (wildPokemon.isFusionBoss) {
     if (!claimBattleReward(jid)) return;
+    await recordDailyPokemonWildWin(battle.challengerJid).catch((error) =>
+      console.error("Daily Pokémon quest progress failed:", error),
+    );
     const bossXp = 30000;
     const bossGold = 12000000;
     if (pokeId) await addPokemonXP(pokeId, bossXp);
@@ -195,6 +198,9 @@ async function handleWildDefeat(sock, jid, msg, battle, trainer) {
   const xp    = xpReward(wildPokemon);
   const coins = coinReward(wildPokemon.level);
 
+  await recordDailyPokemonWildWin(battle.challengerJid).catch((error) =>
+    console.error("Daily Pokémon quest progress failed:", error),
+  );
   const xpRes = await addPokemonXP(pokeId, xp);
   await addMoney(battle.challengerJid, coins);
 
