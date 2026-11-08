@@ -1,7 +1,7 @@
 /**
  * .ban @user [reason]
- * Permanently block a user from using any bot command.
- * Owner only.
+ * Permanently block a regular user from using any bot command.
+ * Mods and staff can ban regular users; only the configured owner can ban staff.
  */
 import { banUser, getUser } from "../economy/database.js";
 import { generateBanCard } from "../../lib/banCanvas.mjs";
@@ -17,7 +17,6 @@ export default {
   usage: ".ban @user [reason]",
   aliases: ["botban", "blockuser"],
   isMod: true,
-  isStaff: true,
   minStaffLevel: 1,
 
   async run({ sock, msg, args, sender, isActualOwner, staffLevel = 0 }) {

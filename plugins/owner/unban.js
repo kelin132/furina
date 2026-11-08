@@ -1,7 +1,6 @@
 /**
  * .unban @user
  * Restore a banned user's access to the bot.
- * Owner only.
  */
 import { unbanUser, getUser } from "../economy/database.js";
 import { generateBanCard } from "../../lib/banCanvas.mjs";
@@ -11,14 +10,13 @@ import { resolveLidToJid } from "../../lib/identity.mjs";
 export default {
   name: "unban",
   description: "Restore a banned user's bot access",
-  category: "owner",
+  category: "staff",
   usage: ".unban @user",
   aliases: ["botunban", "unblockuser"],
   isMod: true,
-  isStaff: true,
   minStaffLevel: 1,
 
-  async run({ sock, msg, args }) {
+  async run({ sock, msg, args, isActualOwner, staffLevel = 0 }) {
     const jid = msg.key.remoteJid;
 
     const mentioned = msg.message?.extendedTextMessage?.contextInfo?.mentionedJid?.[0];
@@ -52,20 +50,27 @@ export default {
     }
 
     await unbanUser(targetJid);
+    const unbannedBy = isActualOwner
+      ? "Owner"
+      : Number(staffLevel) >= 3
+        ? "Staff Level 3"
+        : Number(staffLevel) >= 2
+          ? "Staff"
+          : "Moderator";
 
     const avatarUrl = await getProfilePic(sock, targetJid);
 
     try {
       const card = await generateBanCard("unban", {
         username:  userName,
-        bannedBy:  "Owner",
+        bannedBy:  unbannedBy,
         date:      new Date().toDateString(),
         avatarUrl,
       });
 
       await sock.sendMessage(jid, {
         image:   card,
-                  caption: `✅ *${userName}* has been *unbanned*. Bot access restored; website access was not changed.`,
+        caption: `✅ *${userName}* has been *unbanned* by ${unbannedBy}. Bot access restored; website access was not changed.`,
 
         mentions: [targetJid],
       }, { quoted: msg });
@@ -74,6 +79,7 @@ export default {
         text:
           `✅ *User Unbanned*\n\n` +
           `👤 User   : ${userName}\n` +
+          `🛡️ Unbanned by: ${unbannedBy}\n` +
           `📅 Date   : ${new Date().toDateString()}\n\n` +
           `_Bot access has been restored. Use .restore to restore website access separately._`,
         mentions: [targetJid],

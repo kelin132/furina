@@ -1,6 +1,16 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { getBanTargetBlock } from "../lib/banAuthorization.mjs";
+import banCommand from "../plugins/owner/ban.js";
+import unbanCommand from "../plugins/owner/unban.js";
+
+test("moderators can use both ban and unban commands", () => {
+  for (const command of [banCommand, unbanCommand]) {
+    assert.equal(command.category, "staff");
+    assert.equal(command.isMod, true);
+    assert.notEqual(command.isStaff, true);
+  }
+});
 
 test("mods and staff can ban regular users", () => {
   assert.equal(getBanTargetBlock({ targetStaffLevel: 0 }), null);
