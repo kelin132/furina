@@ -40,7 +40,7 @@ export const SHOP_ITEMS = {
   diamond_shovel: {
     price: 75_000, orbCost: 0, gemCost: 0, emoji: "🪏",
     rarity: "rare", xpBonus: 0, sellPct: 0.4, category: "tools",
-    description: "Improves your chance of finding bonus diamonds while digging.",
+    description: "Improves your chance of finding bonus Genesis Crystals while digging.",
     inventory: true,
   },
 
@@ -60,7 +60,7 @@ export const SHOP_ITEMS = {
     inventory: true,
   },
   xp_bomb: {
-    price: 30_000, orbCost: 0, gemCost: 0, emoji: "💥",
+    price: 30_000, orbCost: 0, gemCost: 1, emoji: "💥",
     rarity: "rare", xpBonus: 0, sellPct: 0.4, category: "consumables",
     description: "Consume for +500 XP.",
     useEffect: "xp+500",
@@ -81,7 +81,7 @@ export const SHOP_ITEMS = {
     inventory: true,
   },
   getaway_tool: {
-    price: 250_000, orbCost: 0, gemCost: 0, emoji: "🧰",
+    price: 250_000, orbCost: 0, gemCost: 2, emoji: "🧰",
     rarity: "rare", xpBonus: 0, sellPct: 0.3, category: "tools",
     description: "Escape jail once; consumed when used with .escape.",
     inventory: true,

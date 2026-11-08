@@ -130,7 +130,7 @@ export default {
     await addHistory(sender, "roulette", net, `Roulette: ${betType} $${amount.toLocaleString()}`);
 
     const ballLine = `${result} ${emoji} (${color === "green" ? "Green" : color === "red" ? "Red" : "Black"})`;
-    const bonus = diamondReward ? `💎 Bonus: +${diamondReward} Gem${diamondReward === 1 ? "" : "s"}` : "";
+    const bonus = diamondReward ? `💎 Bonus: +${diamondReward} Genesis Crystal${diamondReward === 1 ? "" : "s"}` : "";
 
     return reply(formatGamblingResult({
       icon: "🎡",

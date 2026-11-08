@@ -88,7 +88,7 @@ export default {
         betLabel: `Bet: ${normalCall} ×`,
         bet: amount,
         got: coinEmoji,
-        details: [`💎 Reward: ${fmt(amount * 2)}`, diamondReward ? `💎 Bonus: +${diamondReward} Gem${diamondReward === 1 ? "" : "s"}` : ""],
+        details: [`💎 Reward: ${fmt(amount * 2)}`, diamondReward ? `💎 Bonus: +${diamondReward} Genesis Crystal${diamondReward === 1 ? "" : "s"}` : ""],
         net: amount,
         balance: user.money,
       }));
@@ -108,7 +108,7 @@ export default {
         betLabel: `Bet: ${normalCall} ×`,
         bet: amount,
         got: coinEmoji,
-        details: [diamondReward ? `💎 Bonus: +${diamondReward} Gem${diamondReward === 1 ? "" : "s"}` : ""],
+        details: [diamondReward ? `💎 Bonus: +${diamondReward} Genesis Crystal${diamondReward === 1 ? "" : "s"}` : ""],
         net: -amount,
         balance: user.money,
       }));

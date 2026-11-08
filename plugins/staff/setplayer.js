@@ -1,16 +1,18 @@
 /**
  * .setplayer @user <field> <value>
  * Directly set a specific economy field on a player.
- * Fields: money, bank, diamonds, xp, level
+ * Fields: money, bank, crystals, xp, level
  */
 import { setPlayerFields, getUser, isRegistered } from "../economy/database.js";
 
-const ALLOWED_FIELDS = {
-  money:  "number",
-  bank:   "number",
-  diamonds: "number",
-  xp:     "number",
-  level:  "number",
+const FIELD_MAP = {
+  money: "money",
+  bank: "bank",
+  crystals: "genesisCrystals",
+  genesiscrystals: "genesisCrystals",
+  diamonds: "genesisCrystals",
+  xp: "xp",
+  level: "level",
 };
 
 export default {
@@ -46,9 +48,10 @@ export default {
     const field = args[args.length - 2]?.toLowerCase();
     const raw   = args[args.length - 1];
 
-    if (!field || !ALLOWED_FIELDS[field]) {
+    const storedField = FIELD_MAP[field];
+    if (!field || !storedField) {
       return sock.sendMessage(jid, {
-        text: `❌ Invalid field. Allowed: ${Object.keys(ALLOWED_FIELDS).join(", ")}`
+        text: "❌ Invalid field. Allowed: money, bank, crystals, xp, level",
       }, { quoted: msg });
     }
 
@@ -62,9 +65,9 @@ export default {
     }
 
     const target = await getUser(targetJid);
-    const oldVal = target[field] ?? 0;
+    const oldVal = target[storedField] ?? 0;
 
-    const updated = await setPlayerFields(targetJid, { [field]: value });
+    const updated = await setPlayerFields(targetJid, { [storedField]: value });
     if (!updated) {
       return sock.sendMessage(jid, {
         text: "❌ That player's registered account could not be updated. No data was changed.",
@@ -75,7 +78,7 @@ export default {
       text:
         `✏️ *Player Updated*\n\n` +
         `👤 Player    : ${target.name}\n` +
-        `📊 Field     : ${field}\n` +
+        `📊 Field     : ${storedField === "genesisCrystals" ? "Genesis Crystals" : storedField}\n` +
         `🔢 Old Value : ${oldVal.toLocaleString()}\n` +
         `✅ New Value : ${value.toLocaleString()}`,
       mentions: [targetJid],

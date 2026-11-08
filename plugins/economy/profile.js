@@ -301,7 +301,8 @@ export default {
       cards: cardsOwned,
       games: gamesPlayed,
       pokemon: pokemonCount,
-      diamonds: user.diamonds ?? 0,
+      diamonds: user.genesisCrystals ?? 0,
+      genesisCrystals: user.genesisCrystals ?? 0,
     };
 
     if (profileVideo) {

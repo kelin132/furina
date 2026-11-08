@@ -135,7 +135,7 @@ export default {
         `│ 🎯 Stake: ${fmt(amount)}`,
         `│ 💬 Result: ${resultMsg}`,
         `│ ${net >= 0 ? "💰 +" : "💸 -"}${fmt(Math.abs(net))} │ 💰 ${fmt(user.money)}`,
-        ...(diamondReward ? [`│ 💎 Bonus: +${diamondReward} Gem${diamondReward === 1 ? "" : "s"}`] : []),
+        ...(diamondReward ? [`│ 💎 Bonus: +${diamondReward} Genesis Crystal${diamondReward === 1 ? "" : "s"}`] : []),
         "└─────────────────",
       ].join("\n");
 

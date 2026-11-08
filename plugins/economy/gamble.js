@@ -90,7 +90,7 @@ export default {
         won: true,
         bet: amount,
         got: spin,
-        details: [diamondReward ? `💎 Bonus: +${diamondReward} Gem${diamondReward === 1 ? "" : "s"}` : ""],
+        details: [diamondReward ? `💎 Bonus: +${diamondReward} Genesis Crystal${diamondReward === 1 ? "" : "s"}` : ""],
         net: netWin,
         balance: user.money,
       }));
@@ -109,7 +109,7 @@ export default {
         title: "Gamble",
         bet: amount,
         got: spin,
-        details: [diamondReward ? `💎 Bonus: +${diamondReward} Gem${diamondReward === 1 ? "" : "s"}` : ""],
+        details: [diamondReward ? `💎 Bonus: +${diamondReward} Genesis Crystal${diamondReward === 1 ? "" : "s"}` : ""],
         net: -amount,
         balance: user.money,
       }));

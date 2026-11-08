@@ -90,7 +90,7 @@ export default {
       "",
       `Wallet: ${fmt(user.money || 0)} • Orbs: ${user.orbs || 0} • Items: ${(user.inventory || []).length} • XP: +5.`,
     ];
-    if (diamondReward) details.push(`💎 Bonus: +${diamondReward} Gem${diamondReward === 1 ? "" : "s"}`);
+    if (diamondReward) details.push(`💎 Bonus: +${diamondReward} Genesis Crystal${diamondReward === 1 ? "" : "s"}`);
     return reply(details.join("\n"));
   },
 };
