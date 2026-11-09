@@ -1,6 +1,10 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { resolveProfileVideoSource } from "../lib/profileMedia.mjs";
+import {
+  resolveProfileBackgroundVideoSource,
+  resolveProfileVideoSource,
+  resolveWebsiteProfileField,
+} from "../lib/profileMedia.mjs";
 
 test("uses the latest website GIF instead of a stale bot profile URL", () => {
   assert.equal(resolveProfileVideoSource({
@@ -63,4 +67,32 @@ test("keeps the current non-website and Discord animation fallbacks", () => {
   }), "https://cards.example/profile.mp4");
   assert.equal(resolveProfileVideoSource({ user: {}, cardUser: null, fallback: "https://discord.example/avatar.gif" }),
     "https://discord.example/avatar.gif");
+});
+
+test("resolves background animation and member style from the latest website profile", () => {
+  const cardUser = {
+    profileBackgroundVideo: "https://new.example/cover.gif?profile=1&format=gif",
+    profileFont: "trebuchet",
+    profileColor: "#12abcd",
+    websiteProfileUpdatedAt: new Date("2026-11-09T10:00:00Z"),
+  };
+  const user = {
+    profileBackgroundVideo: "https://old.example/cover.gif",
+    profileFont: "arial",
+    profileColor: "#000000",
+    websiteProfileUpdatedAt: new Date("2026-11-08T10:00:00Z"),
+  };
+  assert.equal(resolveProfileBackgroundVideoSource({ cardUser, user }), cardUser.profileBackgroundVideo);
+  assert.equal(resolveWebsiteProfileField({ cardUser, user, field: "profileFont" }), "trebuchet");
+  assert.equal(resolveWebsiteProfileField({ cardUser, user, field: "profileColor" }), "#12abcd");
+});
+
+test("clearing a website background animation does not restore a stale bot GIF", () => {
+  assert.equal(resolveProfileBackgroundVideoSource({
+    cardUser: {
+      profileBackgroundVideo: null,
+      websiteProfileUpdatedAt: new Date("2026-11-09T10:00:00Z"),
+    },
+    user: { profileBackgroundVideo: "https://old.example/cover.gif" },
+  }), null);
 });

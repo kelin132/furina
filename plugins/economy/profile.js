@@ -1,7 +1,11 @@
 import { getQuickProfileUser, getUser, requireRegistration } from "./database.js";
 import { generateProfileImage, getProfilePic, resolveRole } from "../../lib/profileGen.mjs";
 import { generateAnimatedProfileCard } from "../../lib/profileAnimation.mjs";
-import { resolveProfileVideoSource } from "../../lib/profileMedia.mjs";
+import {
+  resolveProfileBackgroundVideoSource,
+  resolveProfileVideoSource,
+  resolveWebsiteProfileField,
+} from "../../lib/profileMedia.mjs";
 import { getLevelRole, getAllEarnedRoles, getLevelRoleLabel } from "../../lib/levelRoles.mjs";
 import { getUserProfileSummary } from "../cards/db.js";
 import { countTrainerPokemon } from "../../lib/pokemon/pokemonDb.mjs";
@@ -186,17 +190,36 @@ export default {
       profilePicFromSocket,
     });
     const profileVideo = resolveProfileVideoSource({ cardUser, user });
+    const profileBackgroundVideo = resolveProfileBackgroundVideoSource({ cardUser, user });
+    const activeMembership =
+      user?.membershipTier === "basic" ||
+      user?.membershipTier === "premium" ||
+      user?.isPremium === true;
+    const profileFont = activeMembership ? resolveWebsiteProfileField({
+      cardUser,
+      user,
+      field: "profileFont",
+      fallback: "georgia",
+    }) : "georgia";
+    const profileColor = activeMembership ? resolveWebsiteProfileField({
+      cardUser,
+      user,
+      field: "profileColor",
+      fallback: "#ead8ff",
+    }) : "#ead8ff";
 
     const tag   = target.split("@")[0].split(":")[0];
     const level = user.level ?? 1;
     const xp    = user.xp    ?? 0;
     const registeredName = String(user.name || "User").trim() || "User";
     const cardsOwned = cardUser?.cardsCount ?? 0;
-    const profileFrame = user?.websiteProfileUpdatedAt
-      ? user.profileFrame ?? "none"
-      : cardUser?.websiteProfileUpdatedAt
-        ? cardUser.profileFrame ?? "none"
-        : user.profileFrame ?? cardUser?.profileFrame ?? null;
+    const profileFrame = user?.membershipTier === "premium" || user?.isPremium === true
+      ? user?.websiteProfileUpdatedAt
+        ? user.profileFrame ?? "none"
+        : cardUser?.websiteProfileUpdatedAt
+          ? cardUser.profileFrame ?? "none"
+          : user.profileFrame ?? cardUser?.profileFrame ?? null
+      : null;
     const history = Array.isArray(user.history) ? user.history : [];
     const gameTypes = new Set(["bet", "coinflip", "slots", "roulette", "scratch", "gamble"]);
     const casinoTypes = new Set(["slots", "roulette", "scratch", "gamble"]);
@@ -294,7 +317,10 @@ export default {
       transactions: user.history?.length   ?? 0,
       profileImage: profilePic,
       profileBackground,
+      profileBackgroundVideo,
       profileFrame,
+      profileFont,
+      profileColor,
       levelRole,
       earnedRoles,
       daysActive,
@@ -305,9 +331,12 @@ export default {
       genesisCrystals: user.genesisCrystals ?? 0,
     };
 
-    if (profileVideo) {
+    if (profileVideo || profileBackgroundVideo) {
       try {
-        const video = await generateAnimatedProfileCard(profileCardData, profileVideo);
+        const video = await generateAnimatedProfileCard(profileCardData, {
+          avatarSource: profileVideo,
+          backgroundSource: profileBackgroundVideo,
+        });
         await sock.sendMessage(
           jid,
           {

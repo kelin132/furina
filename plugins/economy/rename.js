@@ -1,4 +1,6 @@
 import { getUser, saveUser, requireRegistration } from "./database.js";
+import { harareDateKey, membershipDailyRenameLimit } from "../../lib/membershipBenefits.mjs";
+import { getHarareDayWindow } from "../../lib/harareDayWindow.mjs";
 
 const RENAME_COOLDOWN = 24 * 60 * 60 * 1000; // 1 day
 
@@ -27,8 +29,19 @@ export default {
 
     const user = await getUser(sender);
     const now  = Date.now();
+    const today = harareDateKey(new Date(now));
+    const limit = membershipDailyRenameLimit(user.membershipTier);
+    const dayStart = getHarareDayWindow(new Date(now)).start.getTime();
+    const usedToday = user.renameDate === today
+      ? Math.max(0, Number(user.renameCount) || 0)
+      : user.renameDate
+        ? 0
+        : Number(user.lastRename) >= dayStart ? 1 : 0;
 
-    if (user.lastRename && now - user.lastRename < RENAME_COOLDOWN) {
+    if (usedToday >= limit) {
+      if (limit > 1 && limit < Number.MAX_SAFE_INTEGER) {
+        return reply(`⏰ *Daily rename limit reached.*\n\nYou used ${usedToday}/${limit} renames today. Try again after midnight.`);
+      }
       const rem  = RENAME_COOLDOWN - (now - user.lastRename);
       const hrs  = Math.floor(rem / 3_600_000);
       const mins = Math.floor((rem % 3_600_000) / 60_000);
@@ -38,6 +51,8 @@ export default {
     const oldName    = user.name || "User";
     user.name        = name;
     user.lastRename  = now;
+    user.renameDate  = today;
+    user.renameCount = usedToday + 1;
     await saveUser(sender, user);
 
     return reply(`✅ *Name changed!*\n\n📛 ${oldName} → *${name}*`);

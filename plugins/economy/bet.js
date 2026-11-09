@@ -10,6 +10,7 @@ import { MAX_BET, maxBetMessage } from "./bettingLimits.js";
 import { getNewlyUnlockedRole, buildLevelUpMsg } from "../../lib/levelRoles.mjs";
 import { formatGamblingResult } from "../../lib/gamblingFormat.mjs";
 import { getBettingTier } from "./currency.js";
+import { membershipWinRate } from "../../lib/membershipBenefits.mjs";
 
 const COOLDOWN = 30 * 1000;
 
@@ -89,7 +90,7 @@ export default {
       return sock.sendMessage(jid, { text: "❌ Minimum bet is \`$10\`." }, { quoted: msg });
 
     const tier         = getBettingTier(amount);
-    const won          = Math.random() < tier.winRate;
+    const won          = Math.random() < membershipWinRate(tier.winRate, user.membershipTier);
     const payout       = Math.floor(amount * tier.multiplier);
     const netWin       = payout - amount;
     const diamondReward = maybeAwardDiamonds(user, won ? 0.003 : 0.001, 1, 2);

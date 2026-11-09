@@ -293,7 +293,8 @@ export async function getUser(id) {
 export async function getQuickProfileUser(id) {
   const fields = [
     "registered", "name", "money", "bank", "level", "xp", "bio",
-    "profileBackground", "profileFrame", "age", "birthday", "lastDaily",
+    "profileBackground", "profileBackgroundVideo", "profileFrame", "profileFont", "profileColor",
+    "age", "birthday", "lastDaily",
     "streak", "reach", "diamonds", "genesisCrystals", "staffLevel", "isPremium",
     "registeredAt", "guildName", "guild", "inventory",
     "profilePictureUrl", "profileImage", "avatarUrl", "avatarVideo",
