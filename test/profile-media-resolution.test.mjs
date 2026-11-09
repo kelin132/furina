@@ -35,6 +35,27 @@ test("uses a newer website user record over an older mirrored card record", () =
   }), null);
 });
 
+test("never restores an old WhatsApp animation over the website profile snapshot", () => {
+  assert.equal(resolveProfileVideoSource({
+    user: { avatarVideo: "https://old.example/whatsapp.gif" },
+    cardUser: {
+      avatarVideo: "https://new.example/website.gif",
+      websiteProfileUpdatedAt: new Date("2026-11-09T10:00:00Z"),
+    },
+  }), "https://new.example/website.gif");
+});
+
+test("a cleared website animation does not fall back to an old WhatsApp animation", () => {
+  assert.equal(resolveProfileVideoSource({
+    user: { avatarVideo: "https://old.example/whatsapp.gif" },
+    cardUser: {
+      avatarVideo: null,
+      websiteProfileUpdatedAt: new Date("2026-11-09T10:00:00Z"),
+    },
+    fallback: "https://old.example/fallback.gif",
+  }), null);
+});
+
 test("keeps the current non-website and Discord animation fallbacks", () => {
   assert.equal(resolveProfileVideoSource({
     user: {},

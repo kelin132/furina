@@ -45,6 +45,11 @@ test("strict owner commands remain limited to the configured bot owner", () => {
   assert.equal(canRunOwnerCommand(command, true, 0), true);
 });
 
+test("membership activation follows the owner role, while strict commands stay owner-only", () => {
+  assert.equal(canRunOwnerCommand({ isOwner: true }, false, 3), true);
+  assert.equal(canRunOwnerCommand({ isOwner: true, strictOwner: true }, false, 3), false);
+});
+
 test("the public mods roster is not treated as an owner command", () => {
   const command = { category: "owner", public: true };
   assert.equal(canRunOwnerCommand(command, false, 0), true);

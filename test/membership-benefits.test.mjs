@@ -14,8 +14,8 @@ test("membership tiers adjust bank space and command cooldowns", () => {
   assert.equal(commandCooldownMultiplier("none"), 1);
 });
 
-test("membership links to the public page and activation is strict-owner only", () => {
+test("membership links to the public page and activation is available to owner-role staff", () => {
   assert.equal(getEconomyPreviewConfig("membership")?.url, "https://aidoru.zone.id/membership");
-  assert.equal(activate.strictOwner, true);
+  assert.equal(activate.strictOwner, undefined);
   assert.equal(activate.isOwner, true);
 });

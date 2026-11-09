@@ -6,7 +6,6 @@ export default {
   description: "Set a user's membership tier",
   usage: ".activate @user basic | premium | off",
   isOwner: true,
-  strictOwner: true,
 
   async run({ sock, msg, args, discord }) {
     const tier = String(args.at(-1) || "").toLowerCase();
