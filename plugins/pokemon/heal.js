@@ -3,7 +3,7 @@
 
 import { getTrainer } from "../../lib/pokemon/players.mjs";
 import { getTrainerParty, healParty } from "../../lib/pokemon/pokemonDb.mjs";
-import { getBattle } from "../../lib/pokemon/battleState.mjs";
+import { findActivePokemonBattle } from "../../lib/pokemon/activeBattle.mjs";
 import { readPokemonAnimation } from "../../lib/pokemon/media.mjs";
 
 export default {
@@ -22,15 +22,19 @@ export default {
       return sock.sendMessage(jid, { text: "❌ Start your journey first! Use ``.startjourney``" }, { quoted: msg });
     }
 
-    // Block healing during an active battle (wild or PvP)
-    const activeBattle = getBattle(jid);
+    let activeBattle;
+    try {
+      activeBattle = await findActivePokemonBattle(sender);
+    } catch (error) {
+      console.error("[pokemon-heal] battle status lookup failed:", error?.message || error);
+      return sock.sendMessage(jid, {
+        text: "⚠️ I couldn't verify your battle status, so I paused healing. Please try again shortly.",
+      }, { quoted: msg });
+    }
     if (activeBattle) {
-      const inBattle = activeBattle.challengerJid === sender || activeBattle.opponentJid === sender || activeBattle.trainerJid === sender;
-      if (inBattle) {
-        return sock.sendMessage(jid, {
-          text: "❌ *You can't heal during a battle!*\n\nFinish or flee the battle first.",
-        }, { quoted: msg });
-      }
+      return sock.sendMessage(jid, {
+        text: "❌ *You can't heal your party while a Pokémon battle is active.*\n\nFinish or flee your battle first. This applies in every group and during website battles.",
+      }, { quoted: msg });
     }
 
     const party = await getTrainerParty(sender);

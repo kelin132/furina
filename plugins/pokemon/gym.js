@@ -2,6 +2,7 @@ import { GYMS, gymById, gymBadgeId } from "../../lib/pokemon/gymData.mjs";
 import { getTrainer } from "../../lib/pokemon/players.mjs";
 import { healPartyAndGet } from "../../lib/pokemon/pokemonDb.mjs";
 import { createWebBattleRoom, webBattleUrl } from "../../lib/webBattleRoom.mjs";
+import { findActivePokemonBattle } from "../../lib/pokemon/activeBattle.mjs";
 
 function unlocked(gym, badges) {
   if (!gym.unlockAfter) return true;
@@ -39,6 +40,17 @@ export default {
 
     if (!unlocked(selected, badges)) {
       return sock.sendMessage(jid, { text: `🔒 *${selected.name}* is locked. Earn the *${gymById(selected.unlockAfter)?.badge || "previous badge"}* first.` }, { quoted: msg });
+    }
+
+    let activeBattle;
+    try {
+      activeBattle = await findActivePokemonBattle(sender);
+    } catch (error) {
+      console.error("[pokemon-gym] battle status lookup failed:", error?.message || error);
+      return sock.sendMessage(jid, { text: "⚠️ I couldn't verify your battle status, so I paused the gym challenge. Please try again shortly." }, { quoted: msg });
+    }
+    if (activeBattle) {
+      return sock.sendMessage(jid, { text: "❌ Finish your active Pokémon battle before opening another battle or healing for a gym." }, { quoted: msg });
     }
 
     const party = await healPartyAndGet(sender);
