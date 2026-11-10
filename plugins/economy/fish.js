@@ -1,5 +1,6 @@
 import { getUser, saveUser, requireRegistration, addHistory, checkLevelUp } from "./database.js";
 import { FISH_LOOT, getItemDefinition, rollLoot } from "./_items.js";
+import { addItem as addPokemonItem, getTrainer as getPokemonTrainer } from "../../lib/pokemon/players.mjs";
 
 const COOLDOWN = 10 * 1000; // 10 seconds
 
@@ -42,7 +43,15 @@ export default {
       return reply(`⏳ Your fish cooldown is still active — ${secs}s left.`);
     }
 
-    const loot = rollLoot(FISH_LOOT);
+    let loot = rollLoot(FISH_LOOT);
+    let pokemonTrainer = null;
+    if (loot.type === "pokemon_ball") {
+      pokemonTrainer = await getPokemonTrainer(sender);
+      if (!pokemonTrainer) {
+        // Don't consume a rare Pokémon reward before a trainer has started a journey.
+        loot = { type: "cash", min: 9_000, max: 25_000 };
+      }
+    }
     user.lastFish = now;
 
     let resultLine;
@@ -65,6 +74,11 @@ export default {
       user.orbs = (user.orbs || 0) + amount;
       resultLine = `🎣 You cast your rod and caught ${amount} orb${amount === 1 ? "" : "s"} beneath the waves!`;
       await addHistory(sender, "fish", 0, `Fished up ${amount} orbs`);
+    } else if (loot.type === "pokemon_ball") {
+      const ballName = loot.name === "greatball" ? "Great Ball" : "Poké Ball";
+      await addPokemonItem(sender, loot.name, 1);
+      resultLine = `🎣 A ${ballName} was tangled in your line and added to your Pokémon Bag!`;
+      await addHistory(sender, "fish", 0, `Fished up a ${ballName}`);
     } else {
       resultLine = "🎣 You cast your rod and caught an old boot. Classic!";
     }

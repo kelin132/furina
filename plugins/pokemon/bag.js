@@ -2,7 +2,7 @@
 // Show everything a trainer has in their bag, grouped by category
 
 import { getTrainer } from "../../lib/pokemon/players.mjs";
-import { MART_ITEMS } from "../../lib/pokemon/martItems.mjs";
+import { MART_ITEMS, fetchApiItem } from "../../lib/pokemon/martItems.mjs";
 
 // Category display order and labels
 const CAT_META = {
@@ -39,7 +39,17 @@ export default {
     const groups = {};
     let totalItems = 0;
 
-    for (const [key, qty] of Object.entries(inv)) {
+    const ownedItems = Object.entries(inv).filter(([, qty]) => qty && qty > 0);
+    const itemDescriptions = await Promise.all(ownedItems.map(async ([key]) => {
+      const item = MART_ITEMS[key];
+      if (!item) return [key, "No Pokémon item data available."];
+      if (item.category === "battle") return [key, item.desc];
+      const apiItem = await fetchApiItem(item.slug || key);
+      return [key, apiItem?.effect || item.desc || "No effect details available."];
+    }));
+    const descriptionByKey = new Map(itemDescriptions);
+
+    for (const [key, qty] of ownedItems) {
       if (!qty || qty <= 0) continue;
       const itemData = MART_ITEMS[key];
       const cat      = itemData?.category || "other";
@@ -49,7 +59,7 @@ export default {
         qty,
         emoji: itemData?.emoji || "📦",
         name:  itemData?.name  || key,
-        desc:  itemData?.desc  || "",
+        desc: descriptionByKey.get(key) || itemData?.desc || "",
       });
       totalItems += qty;
     }
@@ -71,7 +81,7 @@ Visit \`.mart\` to buy items.`,
       .flatMap(cat => {
         return groups[cat].map(it => ({
           category: CAT_META[cat]?.label || "🎒 ITEMS",
-          text: `• ${it.emoji} ${it.name}: \`${it.qty}\``,
+          text: `• ${it.emoji} ${it.name}: \`${it.qty}\`\n  ↳ ${it.desc}`,
         }));
       });
 

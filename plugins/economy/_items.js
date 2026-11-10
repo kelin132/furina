@@ -203,6 +203,8 @@ export const FISH_LOOT = [
   { type: "item", name: "boots", weight: 15 },
   { type: "item", name: "basic_fishing_rod", weight: 12 },
   { type: "item", name: "scroll", weight: 8 },
+  { type: "pokemon_ball", name: "pokeball", weight: 4 },
+  { type: "pokemon_ball", name: "greatball", weight: 1 },
   { type: "orbs", min: 1, max: 3, weight: 10 },
   { type: "item", name: "elixir", weight: 4 },
   { type: "nothing", weight: 1 },

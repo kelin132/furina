@@ -25,6 +25,17 @@ test("each task has exactly one correct answer", () => {
   }
 });
 
-test("heists require at least two participants", () => {
-  assert.throws(() => createHeistTasks(["one@s.whatsapp.net"]), RangeError);
+test("a solo heist assigns all five tasks to the solo runner", () => {
+  const solo = "one@s.whatsapp.net";
+  const tasks = createHeistTasks([solo], () => 0.37);
+  assert.equal(tasks.length, HEIST_TASK_COUNT);
+  assert.ok(tasks.every((task) => task.actorIds.length === 1 && task.actorIds[0] === solo));
+  assert.ok(tasks.every((task) => task.targetId === solo));
+});
+
+test("hard heist tasks add a fourth option and a shorter timer", () => {
+  const task = createHeistTasks(["one@s.whatsapp.net", "two@s.whatsapp.net"], () => 0.1)[0];
+  assert.equal(task.difficulty, "HARD");
+  assert.equal(task.options.length, 4);
+  assert.equal(task.timeLimitMs, 18_000);
 });
