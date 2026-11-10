@@ -1,20 +1,26 @@
 /**
  * .heist           — start a crew heist ($1M entry)
- * .heist solo      — attempt all five tasks alone for the whole payout
  * .heist join      — join the active heist ($1M entry)
- * .heist do <1-3>  — answer your assigned heist task
+ * .heist do <number> — answer your assigned heist task
  * .heist cancel    — cancel heist (starter only)
  * .heist status    — check who's joined
  */
 import { getUser, saveUser, requireRegistration, addHistory, jailUser } from "./database.js";
 import { hasActiveGun } from "../../lib/economySecurity.mjs";
-import { createHeistTasks, HEIST_TASK_COUNT, isCorrectHeistAnswer } from "../../lib/heistTasks.mjs";
+import {
+  calculateHeistPayouts,
+  createHeistTasks,
+  HEIST_TASK_COUNT,
+  MAX_HEIST_MEMBERS,
+  MIN_HEIST_MEMBERS,
+  getHeistAnswerOutcome,
+} from "../../lib/heistTasks.mjs";
 
 const JOIN_WINDOW    = 60 * 1000;  // 60 seconds to join
 const TASK_TIMEOUT   = 30 * 1000;  // 30 seconds per crew action
 const JAIL_DURATION  = 10 * 60 * 1000;
 const ENTRY_FEE      = 1_000_000;
-const MIN_MEMBERS    = 1;
+const MIN_MEMBERS    = MIN_HEIST_MEMBERS;
 
 const activeHeists = new Map();    // jid → active recruiting or task state
 const HEIST_ITEMS = ["hack_kit", "med_kit"];
@@ -46,8 +52,8 @@ export default {
   aliases: ["robgroup", "crew"],
   category: "economy",
   cooldown: 6,
-  description: "Run a group heist by completing five crew tasks.",
-  usage: ".heist | solo | join | status | do <1-4> | cancel",
+  description: "Run a difficult seven-stage bank heist with a crew.",
+  usage: ".heist | join | status | do <number> | cancel",
   checkJail: true,
 
   async run({ sock, msg, sender, args }) {
@@ -89,24 +95,62 @@ export default {
 
       heist.resolving = true;
       clearTimeout(heist.taskTimeout);
-      if (!isCorrectHeistAnswer(task, answerNumber)) {
+      const outcome = getHeistAnswerOutcome(task, answerNumber);
+      if (outcome === "fail") {
         return failHeist(sock, jid, heist, "A crew member chose the wrong action.", actorId);
       }
 
+      if (outcome === "betray") {
+        if (Math.random() < 0.28) {
+          return completeHeist(sock, jid, heist, { betrayerId: actorId });
+        }
+        return failHeist(sock, jid, heist, "The crew spotted the double-cross before the getaway.", actorId);
+      }
+
+      if (outcome === "abandon") {
+        const target = heist.members.find((member) => member.id === task.targetId && !member.abandoned);
+        if (!target || target.id === actorId) {
+          return failHeist(sock, jid, heist, "The trapped crew member could not be reached.", actorId);
+        }
+        const results = await Promise.allSettled([
+          jailUser(target.id, JAIL_DURATION),
+          addHistory(target.id, "jail", 0, "Left behind during a heist; jailed for 10 minutes"),
+        ]);
+        if (results[0].status === "rejected") {
+          return failHeist(sock, jid, heist, "The captured teammate's jail record could not be saved.", actorId);
+        }
+        target.abandoned = true;
+        heist.lootPenalty = (heist.lootPenalty || 0) + 2_000_000;
+        await sock.sendMessage(jid, {
+          text: `🚨 @${shortId(actorId)} cut @${shortId(target.id)} loose. They were caught and jailed for 10 minutes. The remaining crew escapes this stage, but the bank haul is reduced by ${fmt(2_000_000)}.`,
+          mentions: [actorId, target.id],
+        }, { quoted: msg });
+        if (results[1].status === "rejected") {
+          await sock.sendMessage(jid, {
+            text: `⚠️ The jail was recorded, but the heist history for @${shortId(target.id)} could not be saved.`,
+            mentions: [target.id],
+          });
+        }
+        reassignUnavailableActors(heist);
+      }
+
+      heist.cashBonus = (heist.cashBonus || 0) + (task.cashBonus || 0);
       heist.actorIndex += 1;
       if (heist.actorIndex >= task.actorIds.length) {
         heist.taskIndex += 1;
         heist.actorIndex = 0;
       }
 
-      if (heist.taskIndex >= HEIST_TASK_COUNT) {
+      if (heist.taskIndex >= heist.tasks.length) {
         return completeHeist(sock, jid, heist);
       }
 
-      await sock.sendMessage(jid, {
-        text: `✅ @${actorId.split("@")[0].split(":")[0]} completed the action.`,
-        mentions: [actorId],
-      }, { quoted: msg });
+      if (outcome === "success") {
+        await sock.sendMessage(jid, {
+          text: `✅ @${shortId(actorId)} completed the ${task.stage.toLowerCase()} action.`,
+          mentions: [actorId],
+        }, { quoted: msg });
+      }
       return sendCurrentHeistTask(sock, jid, heist);
     }
 
@@ -117,14 +161,16 @@ export default {
 `╭─❀「 🏦 *𝐇𝐄𝐈𝐒𝐓* 」❀─╮
 │ ℹ️  *Status*  :: *NO ACTIVE HEIST*
 │
-│ 💡 Start one with *.heist* or go solo with *.heist solo*
+│ 💡 Start with *.heist* and bring at least one crew member.
 ╰───────────────❀`
       );
-      const names = heist.members.map(m => `│   • @${m.id.split("@")[0].split(":")[0]}`).join("\n");
+      const names = heist.members.map((member) =>
+        `│   • @${shortId(member.id)}${member.abandoned ? " — left behind" : ""}`
+      ).join("\n");
       const task = heist.phase === "tasks" ? heist.tasks[heist.taskIndex] : null;
       const currentActor = task?.actorIds[heist.actorIndex];
       const phaseText = heist.phase === "tasks"
-        ? `│ 🎯 *Task*    :: *${heist.taskIndex + 1}/${HEIST_TASK_COUNT}*\n│ 🕵️ *Turn*    :: *${currentActor ? `@${currentActor.split("@")[0].split(":")[0]}` : "Resolving"}*\n│ ⏳ *Time*    :: *${Math.max(0, Math.ceil((heist.taskDeadline - Date.now()) / 1000))}s*`
+        ? `│ 🎯 *Stage*   :: *${heist.taskIndex + 1}/${heist.tasks.length} · ${task?.stage || "Preparing"}*\n│ 🕵️ *Turn*    :: *${currentActor ? `@${shortId(currentActor)}` : "Resolving"}*\n│ ⏳ *Time*    :: *${Math.max(0, Math.ceil((heist.taskDeadline - Date.now()) / 1000))}s*`
         : heist.phase === "recruiting"
           ? `│ ⏳ *Starts*  :: *${Math.max(0, Math.ceil((heist.startsAt - Date.now()) / 1000))}s*`
           : "│ ⏳ *Phase*   :: *Preparing tasks*";
@@ -134,7 +180,7 @@ export default {
 │ 🌙 *Status*  :: *ACTIVE 🟢*
 │
 │ 💰 *Entry*   :: *${fmt(heist.stake)} per person*
-│ 👥 *Crew*    :: *${heist.members.length}/${MIN_MEMBERS} minimum*
+│ 👥 *Crew*    :: *${heist.members.length}/${MAX_HEIST_MEMBERS} · ${MIN_MEMBERS} minimum*
 ${phaseText}
 │
 │ 🦹 *Crew Members:*
@@ -181,10 +227,13 @@ ${names}
 `╭─❀「 🏦 *𝐇𝐄𝐈𝐒𝐓* 」❀─╮
 │ ❌ *Result*  :: *NO HEIST 🔴*
 │
-│ 💡 Start one with *.heist* or go solo with *.heist solo*
+│ 💡 Start one with *.heist* and recruit at least one crew member.
 ╰───────────────❀`
       );
       if (heist.phase !== "recruiting") return reply("❌ The crew is already completing heist tasks.");
+      if (heist.members.length + heist.pendingJoins >= MAX_HEIST_MEMBERS) {
+        return reply(`❌ This crew is full. A heist can have up to ${MAX_HEIST_MEMBERS} players.`);
+      }
       if (
         heist.members.find((member) => member.id === sender) ||
         heist.joiningMembers.has(sender)
@@ -249,14 +298,16 @@ ${names}
       return reply("❌ There's already an active heist.\n\nUse *.heist join* to join it.");
     }
 
-    const soloMode = sub === "solo";
-    const requestedEntry = sub === "start" || soloMode || !sub
+    if (sub === "solo") {
+      return reply(`Heists are crew-only. Start with *.heist* and wait for at least ${MIN_MEMBERS} players.`);
+    }
+    const requestedEntry = sub === "start" || !sub
       ? ENTRY_FEE
       : /^1(?:000000|m)$/i.test(sub)
         ? ENTRY_FEE
         : Number.NaN;
     if (requestedEntry !== ENTRY_FEE) {
-      return reply(`Each heist has a fixed *${fmt(ENTRY_FEE)}* entry fee. Use *.heist* or *.heist solo*.`);
+      return reply(`Each heist has a fixed *${fmt(ENTRY_FEE)}* entry fee. Start a crew with *.heist*.`);
     }
     const stake = ENTRY_FEE;
 
@@ -291,8 +342,8 @@ ${names}
       starter:  sender,
       stake,
       members:  [{ id: sender, stake }],
-      phase:    soloMode ? "closing" : "recruiting",
-      startsAt: soloMode ? Date.now() : Date.now() + JOIN_WINDOW,
+      phase:    "recruiting",
+      startsAt: Date.now() + JOIN_WINDOW,
       timeout:  null,
       taskTimeout: null,
       tasks: [],
@@ -301,17 +352,11 @@ ${names}
       resolving: false,
       pendingJoins: 0,
       joiningMembers: new Set(),
+      cashBonus: 0,
+      lootPenalty: 0,
     };
 
     activeHeists.set(jid, heist);
-
-    if (soloMode) {
-      await sock.sendMessage(jid, {
-        text: `🕶️ *SOLO HEIST LOCKED IN*\nYou paid ${fmt(ENTRY_FEE)} and are going in alone. Complete all ${HEIST_TASK_COUNT} tasks to keep the full payout.`,
-        mentions: [sender],
-      }, { quoted: msg });
-      return startHeistTasks(sock, jid, heist);
-    }
 
     heist.timeout = setTimeout(async () => {
       const h = activeHeists.get(jid);
@@ -328,11 +373,11 @@ ${names}
 │
 │ 💰 *Entry*   :: *${fmt(stake)} per person*
 │ ⏳ *Window*  :: *60 seconds to join*
-│ 👥 *Minimum* :: *Solo or crew*
-│ 🎯 *Tasks*   :: *${HEIST_TASK_COUNT} tasks — one mistake fails*
+│ 👥 *Crew*    :: *${MIN_MEMBERS}–${MAX_HEIST_MEMBERS} players*
+│ 🎯 *Stages*  :: *${HEIST_TASK_COUNT} security stages*
 │
 │ 👤 Starter: *@${sender.split("@")[0]}*
-│ 💡 Join for ${fmt(ENTRY_FEE)} with *.heist join* — or finish alone for the full payout.
+│ 💡 Crew members join with *.heist join*. No solo runs.
 ╰───────────────❀`,
       mentions: [sender],
     }, { quoted: msg });
@@ -341,6 +386,28 @@ ${names}
 
 function shortId(id) {
   return id.split("@")[0].split(":")[0];
+}
+
+function activeCrew(heist) {
+  return heist.members.filter((member) => !member.abandoned);
+}
+
+function reassignUnavailableActors(heist) {
+  const crew = activeCrew(heist);
+  if (!crew.length) return;
+  let replacementIndex = 0;
+  for (let index = heist.taskIndex + 1; index < heist.tasks.length; index++) {
+    const task = heist.tasks[index];
+    if (task.actorIds.every((id) => !crew.some((member) => member.id === id))) {
+      task.actorIds = [crew[replacementIndex % crew.length].id];
+      replacementIndex++;
+    }
+    if (!crew.some((member) => member.id === task.targetId)) {
+      const replacement = crew.find((member) => member.id !== task.actorIds[0]) || crew[0];
+      task.prompt = task.prompt.replace(`@${shortId(task.targetId)}`, `@${shortId(replacement.id)}`);
+      task.targetId = replacement.id;
+    }
+  }
 }
 
 async function startHeistTasks(sock, jid, heist) {
@@ -376,9 +443,9 @@ async function startHeistTasks(sock, jid, heist) {
   await sock.sendMessage(jid, {
     text:
 `🚨 *The heist is underway!*
-There are *${HEIST_TASK_COUNT} tasks*. Every crew member gets a turn.
-The assigned player has *18–30 seconds* to choose an option. Hard tasks have four choices.
-One wrong answer or a timeout fails the heist and jails the whole crew for *10 minutes*.`,
+The crew faces *${heist.tasks.length} stages* from recon to getaway. Every player gets a turn.
+Hard stages have more choices and only *15 seconds*. A wrong move or timeout can jail the active crew for *10 minutes*.
+At the rescue stage, the assigned player may save a teammate or leave them behind. At the getaway, a risky double-cross can take the whole haul.`,
     mentions: heist.members.map((member) => member.id),
   });
   return sendCurrentHeistTask(sock, jid, heist);
@@ -414,7 +481,7 @@ async function sendCurrentHeistTask(sock, jid, heist) {
   try {
     await sock.sendMessage(jid, {
       text:
-`╭─❀「 🏦 *𝐇𝐄𝐈𝐒𝐓 TASK ${heist.taskIndex + 1}/${HEIST_TASK_COUNT}* 」❀─╮
+`╭─❀「 🏦 *𝐇𝐄𝐈𝐒𝐓 ${task.stage} · ${heist.taskIndex + 1}/${heist.tasks.length}* 」❀─╮
 │ 👤 Assigned :: @${shortId(actorId)}${taskTurn}
 │ ⚠️ Difficulty :: *${task.difficulty || "NORMAL"}* · *${Math.ceil(timeLimit / 1000)}s*
 │
@@ -431,14 +498,64 @@ ${task.options.map((option, index) => `│ ${index + 1}. ${option}`).join("\n")}
   }
 }
 
-async function completeHeist(sock, jid, heist) {
+async function completeHeist(sock, jid, heist, { betrayerId = null } = {}) {
   if (activeHeists.get(jid) !== heist) return;
+  const survivors = activeCrew(heist);
+  if (betrayerId && !survivors.some((member) => member.id === betrayerId)) {
+    return failHeist(sock, jid, heist, "The betrayer was already left behind.", betrayerId);
+  }
   activeHeists.delete(jid);
   clearTimeout(heist.taskTimeout);
 
-  const totalPot = heist.members.reduce((sum, member) => sum + member.stake, 0);
-  const payout = Math.floor(totalPot / heist.members.length) + 10_000_000;
-  for (const member of heist.members) {
+  const bankLoot = Math.max(
+    1_000_000,
+    heist.members.length * 10_000_000 +
+      Math.floor(Math.random() * 8_000_001) +
+      (heist.cashBonus || 0) -
+      (heist.lootPenalty || 0),
+  );
+  const payouts = calculateHeistPayouts(heist.members, bankLoot, betrayerId);
+
+  if (betrayerId) {
+    const betrayer = survivors.find((member) => member.id === betrayerId);
+    const caught = survivors.filter((member) => member.id !== betrayerId);
+    const jailResults = await Promise.allSettled(
+      caught.flatMap((member) => [
+        jailUser(member.id, JAIL_DURATION),
+        addHistory(member.id, "jail", 0, "Left behind during a heist double-cross; jailed for 10 minutes"),
+      ]),
+    );
+    caught.forEach((member) => { member.abandoned = true; });
+    const payout = payouts.get(betrayer.id);
+    const user = await getUser(betrayer.id);
+    user.money = (user.money || 0) + payout;
+    await saveUser(betrayer.id, user);
+    await addHistory(betrayer.id, "rob", payout - betrayer.stake, `Heist double-cross payout ${fmt(payout)}`);
+
+    await sock.sendMessage(jid, {
+      text:
+`╭─❀「 🏦 *𝐇𝐄𝐈𝐒𝐓* 」❀─╮
+│ 🌙 *Result*   :: *DOUBLE-CROSS 🟡*
+│ 🍃 *Flavour*  :: _The crew was betrayed at the getaway._
+│
+│ 💰 *Bank haul* :: *${fmt(bankLoot)}*
+│ 💰 *Taken by*  :: *@${shortId(betrayer.id)} — ${fmt(payout)}*
+│ 🔒 *Left behind* :: *The rest of the crew is jailed for 10 minutes.*
+╰───────────────❀`,
+      mentions: heist.members.map((member) => member.id),
+    });
+    if (jailResults.some((result) => result.status === "rejected")) {
+      await sock.sendMessage(jid, {
+        text: "⚠️ One or more jail records could not be saved. Please check the bot database.",
+        mentions: caught.map((member) => member.id),
+      });
+    }
+    return;
+  }
+
+  const payoutPerMember = Math.floor(bankLoot / survivors.length);
+  for (const member of survivors) {
+    const payout = payouts.get(member.id);
     const user = await getUser(member.id);
     user.money = (user.money || 0) + payout;
     await saveUser(member.id, user);
@@ -446,18 +563,21 @@ async function completeHeist(sock, jid, heist) {
   }
 
   const mentions = heist.members.map((member) => member.id);
-  const tags = heist.members.map((member) => `@${shortId(member.id)}`).join(" ");
+  const tags = survivors.map((member) => `@${shortId(member.id)}`).join(" ");
+  const leftBehind = heist.members.filter((member) => member.abandoned);
+  const leftBehindText = leftBehind.length
+    ? `\n│ 🧍 *Left behind* :: ${leftBehind.map((member) => `@${shortId(member.id)}`).join(" ")}`
+    : "";
   await sock.sendMessage(jid, {
     text:
 `╭─❀「 🏦 *𝐇𝐄𝐈𝐒𝐓* 」❀─╮
 │ 🌙 *Result*   :: *SUCCESS 🟢*
-│ 🍃 *Flavour*  :: _The crew completed all ${HEIST_TASK_COUNT} tasks._
+│ 🍃 *Flavour*  :: _The crew cleared ${heist.tasks.length} security stages._
 │
-│ 💰 *Total*    :: *${fmt(payout * heist.members.length)}*
-│ 💰 *Per Head* :: *+${fmt(payout)}*
+│ 💰 *Bank haul* :: *${fmt(bankLoot)}*
+│ 💰 *Per Head*  :: *+${fmt(payoutPerMember)} plus stake returned*
 │
-│ 🦹 *The full crew escaped!*
-│ ${tags}
+│ 🦹 *Crew escaped:* ${tags}${leftBehindText}
 ╰───────────────❀`,
     mentions,
   });
@@ -470,11 +590,12 @@ async function failHeist(sock, jid, heist, reason, mistakeId = null) {
   clearTimeout(heist.timeout);
   clearTimeout(heist.taskTimeout);
 
+  const caught = activeCrew(heist);
   const jailResults = await Promise.allSettled(
-    heist.members.map((member) => jailUser(member.id, JAIL_DURATION)),
+    caught.map((member) => jailUser(member.id, JAIL_DURATION)),
   );
   await Promise.allSettled(
-    heist.members.map((member) => addHistory(
+    caught.map((member) => addHistory(
       member.id,
       "jail",
       0,
@@ -484,7 +605,11 @@ async function failHeist(sock, jid, heist, reason, mistakeId = null) {
 
   const totalPot = heist.members.reduce((sum, member) => sum + member.stake, 0);
   const mentions = heist.members.map((member) => member.id);
-  const tags = heist.members.map((member) => `@${shortId(member.id)}`).join(" ");
+  const tags = caught.map((member) => `@${shortId(member.id)}`).join(" ");
+  const leftBehind = heist.members
+    .filter((member) => member.abandoned)
+    .map((member) => `@${shortId(member.id)}`)
+    .join(" ");
   const mistakeTag = mistakeId ? ` @${shortId(mistakeId)}` : "";
   await sock.sendMessage(jid, {
     text:
@@ -493,15 +618,16 @@ async function failHeist(sock, jid, heist, reason, mistakeId = null) {
 │ 🍃 *Reason*  :: ${reason}${mistakeTag}
 │
 │ 💸 *Lost*    :: *${fmt(totalPot)} (all stakes)*
-│ 🔒 *Penalty* :: *All crew jailed for 10 minutes*
+│ 🔒 *Penalty* :: *Active crew jailed for 10 minutes*
 │
 │ ${tags}
+${leftBehind ? `│ Already caught: ${leftBehind}\n` : ""}│
 ╰───────────────❀`,
     mentions,
   });
 
   const failedJails = jailResults
-    .map((result, index) => result.status === "rejected" ? heist.members[index].id : null)
+    .map((result, index) => result.status === "rejected" ? caught[index].id : null)
     .filter(Boolean);
   if (failedJails.length) {
     await sock.sendMessage(jid, {
