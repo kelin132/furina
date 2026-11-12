@@ -1,5 +1,6 @@
 import { getUser, saveUser, requireRegistration, isRegistered, addHistory, jailUser } from "./database.js";
 import { hasActiveGun } from "../../lib/economySecurity.mjs";
+import { economyWinRate } from "../../lib/economyOdds.mjs";
 
 function fmt(n) {
   const amount = Math.max(0, Number(n) || 0);
@@ -79,7 +80,7 @@ export default {
 
     // Removed the Math.min(10000, ...) limit:
     const amount  = Math.floor(Math.random() * (target.money * 0.3)) + 100;
-    const success = Math.random() > 0.45;
+    const success = Math.random() < economyWinRate(0.55, robber);
 
     robber.lastRob = now;
 

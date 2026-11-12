@@ -9,6 +9,7 @@ import {
   startInvestment,
   collectInvestment,
 } from "./database.js";
+import { economyWinRate } from "../../lib/economyOdds.mjs";
 
 const MAX_INVEST = 90_000_000; // 90 million cap per investment
 
@@ -110,7 +111,7 @@ ${matured ? "✅ Use *.invest collect* to collect your returns!" : "⏳ Come bac
       }
 
       // Determine outcome
-      const lost = Math.random() < plan.lossChance;
+      const lost = Math.random() < (1 - economyWinRate(1 - plan.lossChance, user));
       let payout, net, lossPct;
 
       if (lost) {

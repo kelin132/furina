@@ -1,4 +1,5 @@
 import { getUser, saveUser, requireRegistration, jailUser, addHistory } from "./database.js";
+import { economyWinRate } from "../../lib/economyOdds.mjs";
 
 const crimes = [
   { name: "pickpocketing",   emoji: "🤌", reward: [300, 800]   },
@@ -40,7 +41,7 @@ export default {
     }
 
     const crime   = crimes[Math.floor(Math.random() * crimes.length)];
-    const success = Math.random() > 0.4; // 60% success
+    const success = Math.random() < economyWinRate(0.60, user);
     const [min, max] = crime.reward;
     const reward  = Math.floor(Math.random() * (max - min)) + min;
 

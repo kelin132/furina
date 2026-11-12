@@ -17,6 +17,7 @@ function formatStatus(status) {
   const lines = [
     "╭─🏛️「 *TAX COLLECTION CONTROL* 」─╮",
     `│ Automatic collection: *${status.enabled ? "ON" : "OFF"}*`,
+    `│ 20% rate: *$300M+ wealth or top 2 on leaderboard*`,
   ];
 
   if (status.enabled && status.nextRunAt) {
@@ -93,7 +94,7 @@ export default {
             `• Registered users: ${result.modifiedCount}/${result.count}`,
             `• Wallet tax: ${formatAmount(result.taxedMoney)}`,
             `• Bank tax: ${formatAmount(result.taxedBank)}`,
-            `• High-wealth users (20%): ${result.highWealthCount}`,
+            `• Users taxed at 20% (including top 2): ${result.highWealthCount}`,
           ].join("\n"),
         );
       }

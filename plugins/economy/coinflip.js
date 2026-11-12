@@ -9,6 +9,7 @@ import { parseAmount } from "./parseAmount.js";
 import { MAX_BET, maxBetMessage } from "./bettingLimits.js";
 import { getNewlyUnlockedRole, buildLevelUpMsg } from "../../lib/levelRoles.mjs";
 import { formatGamblingResult } from "../../lib/gamblingFormat.mjs";
+import { economyWinRate } from "../../lib/economyOdds.mjs";
 
 const COOLDOWN = 8 * 1000;
 
@@ -67,7 +68,7 @@ export default {
 
     user.lastCoinflip = now;
 
-    const won    = randomChance(0.55);
+    const won    = randomChance(economyWinRate(0.55, user));
     const result = won ? normalCall : (normalCall === "heads" ? "tails" : "heads");
     const diamondReward = maybeAwardDiamonds(user, won ? 0.003 : 0.001, 1, 2);
     const coinEmoji = result === "heads" ? "💰 Heads" : "🌑 Tails";

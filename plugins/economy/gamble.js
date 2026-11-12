@@ -6,6 +6,7 @@ import { getNewlyUnlockedRole, buildLevelUpMsg } from "../../lib/levelRoles.mjs"
 import { formatGamblingResult } from "../../lib/gamblingFormat.mjs";
 import { getBettingTier } from "./currency.js";
 import { membershipWinRate } from "../../lib/membershipBenefits.mjs";
+import { economyWinRate } from "../../lib/economyOdds.mjs";
 
 const COOLDOWN = 5 * 60 * 1000;
 
@@ -67,7 +68,10 @@ export default {
     user.lastGamble = now;
 
     const tier = getBettingTier(amount);
-    const won = Math.random() < membershipWinRate(tier.winRate, user.membershipTier);
+    const won = Math.random() < economyWinRate(
+      membershipWinRate(tier.winRate, user.membershipTier),
+      user,
+    );
     const payout = Math.floor(amount * tier.multiplier);
     const netWin = payout - amount;
     const diamondReward = maybeAwardDiamonds(user, won ? 0.003 : 0.001, 1, 2);

@@ -7,6 +7,7 @@
  */
 import { getUser, saveUser, requireRegistration, addHistory, jailUser } from "./database.js";
 import { hasActiveGun } from "../../lib/economySecurity.mjs";
+import { economyWinRate } from "../../lib/economyOdds.mjs";
 import {
   calculateHeistPayouts,
   createHeistTasks,
@@ -101,7 +102,8 @@ export default {
       }
 
       if (outcome === "betray") {
-        if (Math.random() < 0.28) {
+        const betrayer = await getUser(actorId);
+        if (Math.random() < economyWinRate(0.28, betrayer)) {
           return completeHeist(sock, jid, heist, { betrayerId: actorId });
         }
         return failHeist(sock, jid, heist, "The crew spotted the double-cross before the getaway.", actorId);
