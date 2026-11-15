@@ -9,7 +9,7 @@ export default {
   category: "owner",
   usage: ".update",
   aliases: ["pull", "gitpull"],
-  isOwner: true,
+  isMod: true,
   cooldown: 30,
   async run({ sock, msg, prefix }) {
     const send = (text) => sock.sendMessage(msg.key.remoteJid, { text }, { quoted: msg });
