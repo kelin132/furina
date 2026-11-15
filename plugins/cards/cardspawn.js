@@ -7,7 +7,7 @@ export default {
   category: "cards",
   usage: ".cards on | .cards off | .cards status",
   isAdmin: true,
-  isOwner: true,
+  
 
   async run({ sock, msg, args }) {
     const chatId = msg.key.remoteJid;
