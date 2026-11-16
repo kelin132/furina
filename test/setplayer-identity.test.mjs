@@ -35,6 +35,7 @@ registerHooks({
           export const normalizeJid = (id) => String(id);
           export const phoneIdentityFields = () => ({});
           export const whatsappIdentityVariants = (id) => [String(id)];
+          export async function resolveLidToJid(id) { return String(id); }
           export async function findUserByIdentity() {
             return globalThis.__setPlayerAccount;
           }

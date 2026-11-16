@@ -29,7 +29,7 @@ export default {
     const reply = (text) => sock.sendMessage(jid, { text }, { quoted: msg });
 
     // ── .join ────────────────────────────────────────────────────────────
-    const inviteLink = args[0];
+    const inviteLink = args.join(" ");
     if (!inviteLink) {
       return reply(
 `❌ Please provide a WhatsApp group invite link.
@@ -59,10 +59,11 @@ https://chat.whatsapp.com/XXXXXXXXXXXXXXXXXXXXXX`
       groupInfo = await sock.groupGetInviteInfo(inviteCode);
     } catch (err) {
       console.error("[join.js] groupGetInviteInfo error:", err.message);
-      if (err.message?.includes("410") || err.message?.includes("gone")) {
+      const statusCode = Number(err?.output?.statusCode || err?.statusCode || 0);
+      if (statusCode === 410 || err.message?.includes("410") || err.message?.includes("gone")) {
         return reply("❌ This invite link has *expired* or been reset.");
       }
-      if (err.message?.includes("404")) {
+      if (statusCode === 404 || err.message?.includes("404")) {
         return reply("❌ Invite link not found — it may have been revoked.");
       }
       return reply(`❌ Could not fetch group info: ${err.message}`);
@@ -79,17 +80,18 @@ https://chat.whatsapp.com/XXXXXXXXXXXXXXXXXXXXXX`
       if (!groupJid && groupId) groupJid = groupId;
     } catch (err) {
       console.error("[join.js] groupAcceptInvite error:", err.message);
+      const statusCode = Number(err?.output?.statusCode || err?.statusCode || 0);
 
-      if (err.message?.includes("406") || err.message?.includes("not-authorized")) {
+      if (statusCode === 406 || err.message?.includes("406") || err.message?.includes("not-authorized")) {
         return reply("❌ Could not join: The bot may be *banned* from this group, or the invite is admin-only.");
       }
-      if (err.message?.includes("410") || err.message?.includes("gone")) {
+      if (statusCode === 410 || err.message?.includes("410") || err.message?.includes("gone")) {
         return reply("❌ Could not join: This invite link has *expired* or been reset.");
       }
-      if (err.message?.includes("409") || err.message?.includes("conflict")) {
+      if (statusCode === 409 || err.message?.includes("409") || err.message?.includes("conflict")) {
         return reply("ℹ️ The bot is *already a member* of this group.");
       }
-      if (err.message?.includes("429")) {
+      if (statusCode === 429 || err.message?.includes("429")) {
         return reply("❌ *Rate limited* — too many join attempts. Please wait a few minutes and try again.");
       }
       if (err.message?.includes("account_reachout_restricted")) {

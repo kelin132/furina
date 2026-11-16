@@ -35,12 +35,11 @@ export default {
   usage:       ".setget <code> <amount> <YYYY-MM-DD> [maxUses]",
   aliases:     ["deleteget", "getinfo", "listgets"],
   isOwner:     true,
-  strictOwner: true,
 
-  async run({ sock, msg, cmd, args, isActualOwner }) {
+  async run({ sock, msg, cmd, args, isOwner }) {
     const jid = msg.key.remoteJid;
-    if (!isActualOwner) {
-      return sock.sendMessage(jid, { text: "❌ Only the bot owner can manage claim codes." }, { quoted: msg });
+    if (!isOwner) {
+      return sock.sendMessage(jid, { text: "❌ Only the owner or level-3 owner role can manage claim codes." }, { quoted: msg });
     }
 
     // ── .listgets ──────────────────────────────────────────────────────────

@@ -12,6 +12,7 @@ import {
   mergeNumberMaps,
   storedRealNumber,
 } from '../../lib/staffNumbers.mjs';
+import { formatAidoruRoster } from '../../lib/rosterFormat.mjs';
 
 function cleanName(name, number) {
   const value = String(name || "").trim();
@@ -168,39 +169,33 @@ export default {
       const { owners, staff, mods } = await buildRoster(sock, jid, data);
       if (!owners.length && !staff.length && !mods.length) {
         return sock.sendMessage(jid, {
-          text:
-            `╭───〔 ⚔️ 𝐒𝐓𝐀𝐅𝐅 & 𝐌𝐎𝐃𝐒 〕───╮\n` +
-            `│\n` +
-            `│ No staff or mods found.\n` +
-            `│\n` +
-            `╰────────────────────╯`,
+          text: formatAidoruRoster("STAFF & MODS", [
+            { title: "OWNERS", rows: [] },
+            { title: "STAFF", rows: [] },
+            { title: "MODS", rows: [] },
+          ]),
         }, { quoted: msg });
       }
 
       const formatRows = (members) => members.length
         ? members.map((member, index) => {
             const name = cleanName(member.name, member.phone);
-            return `│ ${index + 1}. ${name ? `${name} ─ ` : ""}+${member.phone}`;
+            return `${index + 1}. 🟢 ${name ? `${name} ─ ` : ""}+${member.phone}`;
           })
-        : ['│ None listed'];
+        : ["None listed"];
 
-      const caption = [
-        '╭───〔 ⚔️ 𝐒𝐓𝐀𝐅𝐅 & 𝐌𝐎𝐃𝐒 〕───╮',
-        '│',
-        '│ ♢ 𝐎𝐖𝐍𝐄𝐑𝐒',
-        ...formatRows(owners),
-        '│',
-        '│ ♢ 𝐒𝐓𝐀𝐅𝐅',
-        ...formatRows(staff),
-        '│',
-        '│ ♢ 𝐌𝐎𝐃𝐒',
-        ...formatRows(mods),
-        '│',
-        '╰────────────────────╯',
-      ].join('\n');
+      const caption = formatAidoruRoster("STAFF & MODS", [
+        { title: "OWNERS", rows: formatRows(owners) },
+        { title: "STAFF", rows: formatRows(staff) },
+        { title: "MODS", rows: formatRows(mods) },
+      ]);
+      const mentions = mods
+        .map((member) => `${bareNumber(member.phone)}@s.whatsapp.net`)
+        .filter((mention) => /^\d{7,16}@s\.whatsapp\.net$/.test(mention));
 
       return sock.sendMessage(jid, {
         text: caption,
+        mentions,
       }, { quoted: msg });
     }
 

@@ -14,6 +14,7 @@ const FIELD_MAP = {
   xp: "xp",
   level: "level",
 };
+const ALLOWED_FIELDS = Object.keys(FIELD_MAP);
 
 export default {
   name: "setplayer",
@@ -31,8 +32,9 @@ export default {
 
     if (mentioned) {
       targetJid = mentioned;
-    } else if (args[0]?.match(/^[0-9]+$/)) {
-      targetJid = `${args[0]}@s.whatsapp.net`;
+    } else if (/^[+\d\s().-]+$/.test(String(args[0] || ""))) {
+      const phone = String(args[0]).replace(/\D/g, "");
+      if (phone.length >= 7) targetJid = `${phone}@s.whatsapp.net`;
     }
 
     if (!targetJid) {
@@ -51,13 +53,17 @@ export default {
     const storedField = FIELD_MAP[field];
     if (!field || !storedField) {
       return sock.sendMessage(jid, {
-        text: "❌ Invalid field. Allowed: money, bank, crystals, xp, level",
+        text: `❌ Invalid field. Allowed: ${ALLOWED_FIELDS.join(", ")}`,
       }, { quoted: msg });
     }
 
-    const value = parseFloat(raw);
-    if (isNaN(value) || value < 0) {
+    const valueText = String(raw ?? "").replace(/,/g, "").trim();
+    const value = Number(valueText);
+    if (!/^\d+(?:\.\d+)?$/.test(valueText) || !Number.isFinite(value) || value < 0) {
       return sock.sendMessage(jid, { text: "❌ Value must be a non-negative number." }, { quoted: msg });
+    }
+    if (field === "level" && !Number.isInteger(value)) {
+      return sock.sendMessage(jid, { text: "❌ Level must be a whole number." }, { quoted: msg });
     }
 
     if (!await isRegistered(targetJid)) {
@@ -65,6 +71,9 @@ export default {
     }
 
     const target = await getUser(targetJid);
+    if (!target?.registered) {
+      return sock.sendMessage(jid, { text: "❌ That player's registered account could not be found." }, { quoted: msg });
+    }
     const oldVal = target[storedField] ?? 0;
 
     const updated = await setPlayerFields(targetJid, { [storedField]: value });

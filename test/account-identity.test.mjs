@@ -86,6 +86,21 @@ test("staff rank writes resolve a phone alias to the registered LID account with
   assert.equal(staffWrite.options?.upsert, undefined);
 });
 
+test("staff rank writes preserve the registered account's raw database id", async () => {
+  writes.length = 0;
+  const originalId = account._id;
+  const objectId = { toString: () => "507f1f77bcf86cd799439011" };
+  account._id = objectId;
+  try {
+    assert.equal(await setStaffLevel(objectId, 3), true);
+    const staffWrite = writes.find(({ update }) => update.$set?.staffLevel === 3);
+    assert.equal(staffWrite.query._id, objectId);
+    assert.equal(staffWrite.query.registered, true);
+  } finally {
+    account._id = originalId;
+  }
+});
+
 test("auction debits use an atomic balance condition on the existing phone/LID account", async () => {
   writes.length = 0;
   globalThis.__debitWalletResult = { ...account, money: 734, bank: 50 };

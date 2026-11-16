@@ -996,10 +996,20 @@ export async function repairAllLevels() {
  */
 export async function setStaffLevel(id, level) {
   const db = await getDb();
-  const user = await findUserByIdentity(id);
+  const users = db.collection("users");
+  // Staff commands often already have the registered document's `_id`.
+  // Resolve that exact key first so BSON ObjectIds are not stringified into a
+  // phone-like identity and missed by the WhatsApp alias resolver.
+  const directUser = id == null
+    ? null
+    : await users.findOne(
+      { _id: id, registered: true },
+      { projection: { _id: 1, registered: 1 } },
+    );
+  const user = directUser || await findUserByIdentity(id);
   if (!user || user.registered !== true) return false;
 
-  const result = await db.collection("users").updateOne(
+  const result = await users.updateOne(
     { _id: user._id, registered: true },
     { $set: { staffLevel: level } },
   );

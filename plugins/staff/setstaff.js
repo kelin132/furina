@@ -110,7 +110,7 @@ export default {
       return sock.sendMessage(jid, { text: "❌ You can't change your own rank." }, { quoted: msg });
     }
 
-    const updated = await setStaffLevel(String(target._id), requestedLevel);
+    const updated = await setStaffLevel(target._id, requestedLevel);
     if (!updated) {
       return sock.sendMessage(jid, {
         text: "❌ The staff rank wasn't saved. The user's existing account was left unchanged; please try again."

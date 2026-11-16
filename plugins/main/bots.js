@@ -3,6 +3,7 @@ import {
   listRegisteredBots,
   markBotSessionDeleted,
 } from "../../lib/botRegistry.mjs";
+import { formatAidoruRoster } from "../../lib/rosterFormat.mjs";
 
 export default {
   name: "bots",
@@ -65,28 +66,21 @@ export default {
     }
 
     const now        = Date.now();
-    const onlineBots = bots.filter((b) => isBotOnline(b, now));
-
-    const lines = bots.length
-      ? bots.map((bot, i) => {
+    const rows = bots.length
+      ? bots.map((bot) => {
           const online = isBotOnline(bot, now);
           const name   = bot.botName || "Unnamed Bot";
-          const emoji  = online ? "🟢" : "🔴";
+          const status = online ? "🟢" : "🔴";
           const platform = String(bot.platform || "WhatsApp");
-          return `${i + 1}. ${emoji} *${name}* · ${platform}`;
-        }).join("\n")
-      : "No paired bots registered yet.";
+          return `${status} *${name}* · ${platform}`;
+        })
+      : ["No paired bots registered yet."];
 
     const deleteHint = isOwner && bots.length
       ? `\n_Owner: .bots delete <number> to hide a bot_`
       : "";
 
-    const text =
-`╭━━━〔 🌸 *AKIRA BOTS* 🌸 〕━━━╮
-│ 🟢 Online: *${onlineBots.length}*  /  🌸 Total: *${bots.length}*
-╰━━━━━━━━━━━━━━━━━━━━━━╯
-
-${lines}${deleteHint}`;
+    const text = `${formatAidoruRoster("BOTS", [{ rows }])}${deleteHint}`;
 
     await sock.sendMessage(jid, { text }, { quoted: msg });
   },

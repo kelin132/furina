@@ -10,7 +10,7 @@ import { reloadAkiraAI } from "../../lib/akiraHandler.mjs";
 export default {
   name: "restart",
   aliases: ["reboot", "rs"],
-  description: "Restart the WhatsApp connection without stopping the panel (staff level 2+)",
+  description: "Restart the bot connection (staff level 2+)",
   category: "owner",
   usage: ".restart",
   isStaff: true,
@@ -29,8 +29,12 @@ export default {
 ╰━━━━━━━━━━━━━━━━━━━━━━━━━━╯`,
     }, { quoted: msg });
 
-    // Refresh the AI module before reconnecting so a pulled update is active.
-    await reloadAkiraAI();
+    // A failed optional AI refresh must not block the requested bot restart.
+    try {
+      await reloadAkiraAI();
+    } catch (err) {
+      console.warn("[restart] AI module refresh failed; continuing restart:", err?.message || err);
+    }
 
     // Small delay so the message is delivered before the socket reconnects
     await new Promise(r => setTimeout(r, 2000));

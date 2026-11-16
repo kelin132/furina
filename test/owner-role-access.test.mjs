@@ -25,6 +25,13 @@ test("owner commands allow level 3 and the configured bot owner", () => {
   assert.equal(canRunOwnerCommand(command, false, 2), false);
 });
 
+test("setget owner tools are available to the configured owner role", () => {
+  const setgetCommand = { category: "owner", isOwner: true };
+  assert.equal(canRunOwnerCommand(setgetCommand, false, 3), true);
+  assert.equal(canRunOwnerCommand(setgetCommand, true, 0), true);
+  assert.equal(canRunOwnerCommand(setgetCommand, false, 2), false);
+});
+
 test("owner-category commands allow level 3 but not lower staff", () => {
   const command = { category: "owner" };
   assert.equal(canRunOwnerCommand(command, false, 3), true);
