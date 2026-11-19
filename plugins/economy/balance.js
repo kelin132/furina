@@ -21,7 +21,7 @@ export default {
       "━━━━━━━━━━━━━━━━━",
       `💰 𝗪𝗮𝗹𝗹𝗲𝘁  : ⟦ \`${formatRyu(wallet)}\` ⟧`,
       `🏦 𝗕𝗮𝗻𝗸    : ⟦ \`${formatRyu(bank)} / ${formatRyu(bankLimitForUser(user))}\` ⟧`,
-      `💍 𝗧𝗼𝘁𝗮𝗹   : ⟦ \`${formatRyu(wallet + bank)}\` ⟧`,
+      `💸 𝗧𝗼𝘁𝗮𝗹   : ⟦ \`${formatRyu(wallet + bank)}\` ⟧`,
       "━━━━━━━━━━━━━━━━━",
     ].join("\n");
 
