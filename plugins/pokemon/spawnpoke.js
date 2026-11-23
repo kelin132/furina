@@ -1,3 +1,6 @@
+[plugins/pokemon/spawnpoke.js](https://github.com/kelin132/furina/blob/main/plugins/pokemon/spawnpoke.js)
+
+```javascript
 // plugins/pokemon/spawnpoke.js
 // Spawn a random wild Pokémon in the group
 
@@ -14,20 +17,11 @@ import {
   releaseWildSpawn,
 } from "../../lib/pokemon/wildState.mjs";
 
-import {
-  getTrainer,
-} from "../../lib/pokemon/players.mjs";
+import { getTrainer } from "../../lib/pokemon/players.mjs";
+import { randomWildLevel, getMovesForType } from "../../lib/pokemon/gameLogic.mjs";
+import { getRepel } from "../../lib/pokemon/itemState.mjs";
 
-import {
-  randomWildLevel,
-  getMovesForType,
-} from "../../lib/pokemon/gameLogic.mjs";
-
-import {
-  getRepel,
-} from "../../lib/pokemon/itemState.mjs";
-
-const SPAWN_COOLDOWN_MS = 100 * 1000; // 100 seconds
+const SPAWN_COOLDOWN_MS = 100 * 1000;
 const spawnCooldowns = new Map();
 
 export default {
@@ -43,35 +37,41 @@ export default {
     const trainer = await getTrainer(sender);
 
     if (!trainer) {
-      return sock.sendMessage(jid, {
-        text:
-          "❌ You haven't started your journey yet!\n" +
-          "Use `.startjourney` to begin.",
-      }, {
-        quoted: msg,
-      });
+      return sock.sendMessage(
+        jid,
+        {
+          text:
+            "❌ You haven't started your journey yet!\n" +
+            "Use `.startjourney` to begin.",
+        },
+        { quoted: msg }
+      );
     }
 
     const activeRepel = getRepel(jid);
 
     if (activeRepel) {
-      return sock.sendMessage(jid, {
-        text:
-          `🌿 *${activeRepel.itemName}* is active.\n` +
-          "Wild Pokémon cannot appear right now.",
-      }, {
-        quoted: msg,
-      });
+      return sock.sendMessage(
+        jid,
+        {
+          text:
+            `🌿 *${activeRepel.itemName}* is active.\n` +
+            "Wild Pokémon cannot appear right now.",
+        },
+        { quoted: msg }
+      );
     }
 
     if (getWild(jid)) {
-      return sock.sendMessage(jid, {
-        text:
-          "⚠️ A wild Pokémon is already here!\n" +
-          "Use `.catch` to battle it.",
-      }, {
-        quoted: msg,
-      });
+      return sock.sendMessage(
+        jid,
+        {
+          text:
+            "⚠️ A wild Pokémon is already here!\n" +
+            "Use `.catch` to battle it.",
+        },
+        { quoted: msg }
+      );
     }
 
     const lastSpawn = spawnCooldowns.get(jid) || 0;
@@ -82,23 +82,27 @@ export default {
         (SPAWN_COOLDOWN_MS - elapsed) / 1000
       );
 
-      return sock.sendMessage(jid, {
-        text:
-          "⏳ Wild Pokémon spawn cooldown!\n" +
-          `Wait \`${remaining}s\` before spawning again.`,
-      }, {
-        quoted: msg,
-      });
+      return sock.sendMessage(
+        jid,
+        {
+          text:
+            "⏳ Wild Pokémon spawn cooldown!\n" +
+            `Wait \`${remaining}s\` before spawning again.`,
+        },
+        { quoted: msg }
+      );
     }
 
     if (!reserveWildSpawn(jid)) {
-      return sock.sendMessage(jid, {
-        text:
-          "⏳ A Pokémon spawn is already being prepared for this group.\n" +
-          "Try again in a moment.",
-      }, {
-        quoted: msg,
-      });
+      return sock.sendMessage(
+        jid,
+        {
+          text:
+            "⏳ A Pokémon spawn is already being prepared for this group.\n" +
+            "Try again in a moment.",
+        },
+        { quoted: msg }
+      );
     }
 
     try {
@@ -109,21 +113,25 @@ export default {
       } catch (error) {
         console.error("Failed to fetch random Pokémon:", error);
 
-        return sock.sendMessage(jid, {
-          text:
-            "❌ Couldn't fetch a Pokémon right now.\n" +
-            "Try again!",
-        }, {
-          quoted: msg,
-        });
+        return sock.sendMessage(
+          jid,
+          {
+            text:
+              "❌ Couldn't fetch a Pokémon right now.\n" +
+              "Try again!",
+          },
+          { quoted: msg }
+        );
       }
 
       if (!apiData) {
-        return sock.sendMessage(jid, {
-          text: "❌ Couldn't fetch a Pokémon right now. Try again!",
-        }, {
-          quoted: msg,
-        });
+        return sock.sendMessage(
+          jid,
+          {
+            text: "❌ Couldn't fetch a Pokémon right now. Try again!",
+          },
+          { quoted: msg }
+        );
       }
 
       const level = randomWildLevel();
@@ -146,12 +154,14 @@ export default {
         types.push("normal");
       }
 
+      const primaryType = apiData.primaryType || types[0] || "normal";
+
       const wildPoke = {
         pokedexId: apiData.pokedexId,
         name: apiData.name,
         displayName: apiData.displayName || apiData.name,
         types,
-        primaryType: apiData.primaryType || types[0] || "normal",
+        primaryType,
         level,
         hp: maxHp,
         maxHp,
@@ -169,11 +179,7 @@ export default {
         ),
         imageUrl: apiData.imageUrl || null,
         shiny: Math.random() < 0.005,
-        moves: getMovesForType(
-          apiData.primaryType || types[0] || "normal",
-          types,
-          level
-        ),
+        moves: getMovesForType(primaryType, types, level),
       };
 
       setWild(jid, wildPoke, sender, (pokeName) => {
@@ -206,7 +212,7 @@ export default {
       };
 
       const typeStr = types
-        .map(type => `${typeEmojis[type] || ""}${type}`)
+        .map((type) => `${typeEmojis[type] || ""}${type}`)
         .join(" / ");
 
       const spawnCaption =
@@ -225,12 +231,14 @@ Use \`.catch\` to battle this Pokémon!
 
         if (imgMsg) {
           try {
-            await sock.sendMessage(jid, {
-              ...imgMsg,
-              caption: spawnCaption,
-            }, {
-              quoted: msg,
-            });
+            await sock.sendMessage(
+              jid,
+              {
+                ...imgMsg,
+                caption: spawnCaption,
+              },
+              { quoted: msg }
+            );
 
             spawnCooldowns.set(jid, Date.now());
             return;
@@ -242,11 +250,11 @@ Use \`.catch\` to battle this Pokémon!
         console.error("Failed to prepare Pokémon image:", error);
       }
 
-      await sock.sendMessage(jid, {
-        text: spawnCaption,
-      }, {
-        quoted: msg,
-      });
+      await sock.sendMessage(
+        jid,
+        { text: spawnCaption },
+        { quoted: msg }
+      );
 
       spawnCooldowns.set(jid, Date.now());
     } catch (error) {
@@ -254,15 +262,15 @@ Use \`.catch\` to battle this Pokémon!
       console.error("Spawn Pokémon error:", error);
 
       try {
-        await sock.sendMessage(jid, {
-          text: "❌ Something went wrong while spawning the Pokémon.",
-        }, {
-          quoted: msg,
-        });
+        await sock.sendMessage(
+          jid,
+          { text: "❌ Something went wrong while spawning the Pokémon." },
+          { quoted: msg }
+        );
       } catch {}
     } finally {
-      // Always release the per-group reservation, including on errors.
       releaseWildSpawn(jid);
     }
   },
 };
+```
