@@ -1,7 +1,8 @@
 /**
  * KELIN MD — .pokesearch command
- * Search for Pokémon info using PokeAPI.
+ * Search for Pokémon info using Eula PokéAPI.
  */
+import { fetchPokemon } from "../../lib/pokemon/api.mjs";
 
 export default {
   name: "pokesearch",
@@ -25,23 +26,22 @@ export default {
     try {
       await sock.sendMessage(jid, { react: { text: "🔍", key: msg.key } });
       
-      const res = await fetch(`https://pokeapi.co/api/v2/pokemon/${query}`);
-      if (!res.ok) throw new Error("Pokémon not found.");
-      
-      const data = await res.json();
+      const data = await fetchPokemon(query);
       
       const name = data.name.charAt(0).toUpperCase() + data.name.slice(1);
-      const types = data.types.map(t => t.type.name.toUpperCase()).join(", ");
-      const stats = data.stats.map(s => `• ${s.stat.name.toUpperCase()}: ${s.base_stat}`).join("\n");
-      const abilities = data.abilities.map(a => a.ability.name).join(", ");
+      const types = data.types.map(t => t.toUpperCase()).join(", ");
+      const stats = [["HP", data.baseHp], ["ATTACK", data.baseAttack], ["DEFENSE", data.baseDefense],
+        ["SPECIAL ATTACK", data.baseSpAtk], ["SPECIAL DEFENSE", data.baseSpDef], ["SPEED", data.baseSpeed]]
+        .map(([label, value]) => `• ${label}: ${value}`).join("\n");
+      const abilities = data.abilities.join(", ");
       
-      const caption = `🎮 *POKÉMON INFO: ${name} (#${data.id})*\n\n` +
+      const caption = `🎮 *POKÉMON INFO: ${name} (#${data.pokedexId})*\n\n` +
         `✨ *Type:* ${types}\n` +
         `📏 *Height:* ${data.height / 10}m | ⚖️ *Weight:* ${data.weight / 10}kg\n` +
         `🧬 *Abilities:* ${abilities}\n\n` +
         `📊 *Base Stats:*\n${stats}`;
       
-      const imageUrl = data.sprites.other["official-artwork"].front_default || data.sprites.front_default;
+      const imageUrl = data.imageUrl;
       
       await sock.sendMessage(jid, { image: { url: imageUrl }, caption }, { quoted: msg });
       await sock.sendMessage(jid, { react: { text: "✅", key: msg.key } });

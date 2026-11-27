@@ -2,7 +2,7 @@
  * KELIN MD — .pokeability
  * Fetches info about a Pokemon ability.
  */
-import fetch from "node-fetch";
+import { fetchApiResource } from "../../lib/pokemon/api.mjs";
 
 export default {
   name: "pokeability",
@@ -16,16 +16,13 @@ export default {
     if (!text) return sock.sendMessage(jid, { text: "Usage: .pokeability <name> (e.g. Overgrow)" }, { quoted: msg });
 
     try {
-      const res = await fetch(`https://pokeapi.co/api/v2/ability/${text.toLowerCase().replace(/\s+/g, "-")}`);
-      if (!res.ok) return sock.sendMessage(jid, { text: `❌ Ability *${text}* not found.` }, { quoted: msg });
-      
-      const data = await res.json();
-      const effect = data.effect_entries.find(e => e.language.name === "en")?.effect || "No description available.";
+      const data = await fetchApiResource("abilities", text);
+      const effect = data.Description || "No description available.";
 
       const caption = `
 ✨ *POKEMON ABILITY* ✨
 
-🔮 *Name:* ${data.name.toUpperCase()}
+🔮 *Name:* ${data.Name.toUpperCase()}
 📝 *Effect:*
 ${effect}
 `.trim();

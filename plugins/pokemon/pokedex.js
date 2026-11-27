@@ -1,4 +1,4 @@
-import axios from "axios";
+import { fetchPokemon } from "../../lib/pokemon/api.mjs";
 
 export default {
   name: "pokedex",
@@ -15,14 +15,16 @@ export default {
     if (!query) return reply("❌ Please provide a Pokémon name.");
 
     try {
-      const { data } = await axios.get(`https://pokeapi.co/api/v2/pokemon/${query}`);
+      const data = await fetchPokemon(query);
       
-      const stats = data.stats.map(s => `• *${s.stat.name.toUpperCase()}:* ${s.base_stat}`).join("\n");
-      const types = data.types.map(t => t.type.name.toUpperCase()).join(", ");
-      const abilities = data.abilities.map(a => a.ability.name).join(", ");
+      const stats = [["HP", data.baseHp], ["ATTACK", data.baseAttack], ["DEFENSE", data.baseDefense],
+        ["SPECIAL ATTACK", data.baseSpAtk], ["SPECIAL DEFENSE", data.baseSpDef], ["SPEED", data.baseSpeed]]
+        .map(([name, value]) => `• *${name}:* ${value}`).join("\n");
+      const types = data.types.map(t => t.toUpperCase()).join(", ");
+      const abilities = data.abilities.join(", ");
       
       const caption = `
-📕 *POKEDEX: #${data.id} ${data.name.toUpperCase()}* 📕
+📕 *POKEDEX: #${data.pokedexId} ${data.name.toUpperCase()}* 📕
 ━━━━━━━━━━━━━━━━━━━━━
 🏷️ *Types:* ${types}
 📏 *Height:* ${data.height / 10}m
@@ -35,7 +37,7 @@ ${stats}
 `;
 
       return sock.sendMessage(jid, {
-        image: { url: data.sprites.other['official-artwork'].front_default || data.sprites.front_default },
+        image: { url: data.imageUrl },
         caption
       }, { quoted: msg });
 

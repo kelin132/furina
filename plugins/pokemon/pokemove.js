@@ -2,7 +2,7 @@
  * KELIN MD — .pokemove
  * Fetches info about a Pokemon move.
  */
-import fetch from "node-fetch";
+import { fetchApiResource } from "../../lib/pokemon/api.mjs";
 
 export default {
   name: "pokemove",
@@ -16,20 +16,17 @@ export default {
     if (!text) return sock.sendMessage(jid, { text: "Usage: .pokemove <name> (e.g. Thunderbolt)" }, { quoted: msg });
 
     try {
-      const res = await fetch(`https://pokeapi.co/api/v2/move/${text.toLowerCase().replace(/\s+/g, "-")}`);
-      if (!res.ok) return sock.sendMessage(jid, { text: `❌ Move *${text}* not found.` }, { quoted: msg });
-      
-      const data = await res.json();
-      const effect = data.effect_entries.find(e => e.language.name === "en")?.effect || "No description available.";
+      const data = await fetchApiResource("moves", text);
+      const effect = data.Description || "No description available.";
 
       const caption = `
 ⚔️ *POKEMON MOVE* ⚔️
 
-💥 *Name:* ${data.name.toUpperCase()}
-🏷️ *Type:* ${data.type.name.toUpperCase()}
-🎯 *Accuracy:* ${data.accuracy || "N/A"}
-💪 *Power:* ${data.power || "N/A"}
-🌀 *PP:* ${data.pp}
+💥 *Name:* ${data.Name.toUpperCase()}
+🏷️ *Type:* ${data.Type}
+🎯 *Accuracy:* ${data.Accuracy || "Always hits"}
+💪 *Power:* ${data.Power || "N/A"}
+🌀 *PP:* ${data.TotalPP}
 
 📝 *Effect:*
 ${effect}

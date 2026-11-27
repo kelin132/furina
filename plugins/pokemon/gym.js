@@ -79,7 +79,7 @@ export default {
       speed: pokemon.speed,
       types: pokemon.types,
       moves: pokemon.moves,
-      imageUrl: `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${pokemon.pokedexId}.png`,
+      imageUrl: `https://pokeapi.eulaorg.app/api/sprites/${pokemon.pokedexId}?variant=front`,
       frontSpriteUrl: `https://raw.githubusercontent.com/kelin132/animated-pokemon-gifs/master/${pokemon.pokedexId}.gif`,
       backSpriteUrl: `https://raw.githubusercontent.com/kelin132/animated-pokemon-gifs/master/back/${pokemon.pokedexId}.gif`,
       shiny: false,
